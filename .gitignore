@@ -1,0 +1,29 @@
+# Виртуальное окружение (uv создает .venv)
+.venv/
+
+# Секреты
+.env
+
+# Логи
+bot.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# uv lock файл (можно раскомментировать, если не хотите коммитить)
+# uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
