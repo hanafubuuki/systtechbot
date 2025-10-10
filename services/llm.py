@@ -1,5 +1,6 @@
 """Сервис для работы с LLM через OpenAI-совместимое API"""
 import logging
+import re
 from openai import AsyncOpenAI, APIStatusError, APIConnectionError, RateLimitError, APITimeoutError
 
 from config import Config
@@ -55,6 +56,16 @@ async def get_llm_response(messages: list, config: Config) -> str:
             
             for token in tokens_to_remove:
                 answer = answer.replace(token, '')
+            
+            # Удаляем markdown форматирование
+            # Удаляем ** для жирного текста
+            answer = answer.replace('**', '')
+            # Удаляем одинарные * для курсива (но только окружающие слова)
+            answer = re.sub(r'\*([^\*]+)\*', r'\1', answer)
+            # Удаляем _ для курсива
+            answer = re.sub(r'_([^_]+)_', r'\1', answer)
+            # Удаляем ` для кода
+            answer = answer.replace('`', '')
             
             # Убираем лишние пробелы в конце
             answer = answer.strip()
