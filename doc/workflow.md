@@ -1,7 +1,7 @@
 # Workflow разработки systtechbot
 
 **Для:** Code Assistant (Cursor AI, GitHub Copilot, и т.д.)  
-**Документы:** [vision.md](../vision.md) | [conventions.md](../conventions.md) | [tasklist.md](tasklist.md)
+**Документы:** [vision.md](vision.md) | [conventions.md](conventions.md) | [tasklist.md](tasklist.md)
 
 ---
 
@@ -56,7 +56,7 @@
 **После получения ОК:**
 
 1. Создай/измени файлы согласно плану
-2. Следуй [conventions.md](../conventions.md)
+2. Следуй [conventions.md](conventions.md)
 3. Проверь:
    - ✅ Код соответствует KISS
    - ✅ Нет дублирования из vision.md
@@ -174,7 +174,7 @@ git push origin main
 ### Если нужна новая зависимость
 
 ```
-1. Проверь [vision.md → Технологии](../vision.md#1-технологии)
+1. Проверь [vision.md → Технологии](vision.md#1-технологии)
 2. Если там нет - спроси у пользователя
 3. Дождись разрешения
 4. Добавь в requirements.txt

@@ -99,8 +99,11 @@ systtechbot/
 │
 └── doc/                    # Документация
     ├── adrs/               # ADR-01, ADR-02
+    ├── conventions.md
     ├── idea.md
-    └── vision.md
+    ├── tasklist.md
+    ├── vision.md
+    └── workflow.md
 ```
 
 **Размер:** ~500-700 строк кода (без тестов)
