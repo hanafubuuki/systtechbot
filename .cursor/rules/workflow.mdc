@@ -1,7 +1,10 @@
+---
+alwaysApply: true
+---
 # Workflow разработки systtechbot
 
 **Для:** Code Assistant (Cursor AI, GitHub Copilot, и т.д.)  
-**Документы:** [vision.md](vision.md) | [conventions.md](conventions.md) | [tasklist.md](tasklist.md)
+**Документы:** [vision.md](../../doc/vision.md) | [conventions.mdc](conventions.mdc) | [tasklist.md](../../doc/tasklist.md)
 
 ---
 
@@ -9,7 +12,7 @@
 
 ### 1. Строго по плану
 
-- Выполняй задачи **только** из [tasklist.md](tasklist.md)
+- Выполняй задачи **только** из [tasklist.md](../../doc/tasklist.md)
 - Итерации **строго последовательно** (0 → 1 → 2 → ... → 7)
 - Не пропускай задачи
 - Не добавляй функции "на будущее"
@@ -30,7 +33,7 @@
 
 **Перед началом итерации:**
 
-1. Прочитай задачи текущей итерации из [tasklist.md](tasklist.md)
+1. Прочитай задачи текущей итерации из [tasklist.md](../../doc/tasklist.md)
 2. Предложи решение с **отрезками кода**:
    ```
    Итерация N: [Название]
@@ -56,7 +59,7 @@
 **После получения ОК:**
 
 1. Создай/измени файлы согласно плану
-2. Следуй [conventions.md](conventions.md)
+2. Следуй [conventions.mdc](conventions.mdc)
 3. Проверь:
    - ✅ Код соответствует KISS
    - ✅ Нет дублирования из vision.md
@@ -87,7 +90,7 @@
 
 **После подтверждения:**
 
-1. Обнови [tasklist.md](tasklist.md):
+1. Обнови [tasklist.md](../../doc/tasklist.md):
    - Отметь выполненные задачи: `- [x]`
    - Обнови счетчики в таблице прогресса
    - Обнови статусы итераций
@@ -174,7 +177,7 @@ git push origin main
 ### Если нужна новая зависимость
 
 ```
-1. Проверь [vision.md → Технологии](vision.md#1-технологии)
+1. Проверь [vision.md → Технологии](../../doc/vision.md#1-технологии)
 2. Если там нет - спроси у пользователя
 3. Дождись разрешения
 4. Добавь в pyproject.toml (dependencies)
@@ -236,7 +239,7 @@ uv.lock
 - [ ] Все задачи итерации выполнены
 - [ ] Тест пройден
 - [ ] tasklist.md обновлен
-- [ ] Код следует conventions.md
+- [ ] Код следует conventions.mdc
 - [ ] Получено подтверждение от пользователя
 
 ---
@@ -253,4 +256,3 @@ uv.lock
 
 **Версия:** 1.0  
 **Дата:** 2025-10-10
-
