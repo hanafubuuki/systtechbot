@@ -1,0 +1,229 @@
+# Code Conventions для systtechbot
+
+**Базовый документ:** [vision.md](vision.md) — техническое видение проекта
+
+---
+
+## Основные принципы
+
+### KISS (Keep It Simple, Stupid)
+- Простое решение всегда лучше сложного
+- Если можно в 10 строк — не пиши 100
+- Избегай преждевременной оптимизации
+
+### YAGNI (You Aren't Gonna Need It)
+- Реализуй только то, что нужно сейчас
+- Никаких абстракций "на будущее"
+- Никаких неиспользуемых параметров
+
+### MVP-first
+- Работающий код важнее идеального
+- Рефакторинг потом, когда нужно
+
+---
+
+## Архитектура
+
+### Слои (см. [vision.md](vision.md#4-архитектура))
+
+```
+handlers/   → Только прием/отправка Telegram сообщений
+services/   → Вся бизнес-логика (LLM, контекст)
+roles/      → Конфигурация (промпты)
+```
+
+**Правило:** handlers НЕ содержат бизнес-логику, только вызовы services.
+
+### Хранение состояния
+
+```python
+# ✅ Правильно: простой словарь
+user_contexts = {}
+
+# ❌ Неправильно: сложные паттерны
+class ContextRepository:
+    def save(self, context: Context) -> None: ...
+```
+
+---
+
+## Код
+
+### Стиль
+
+```python
+# ✅ Хорошо: читаемо, очевидно
+def get_user_context(user_id: int, chat_id: int) -> dict:
+    key = (user_id, chat_id)
+    return user_contexts.get(key, {})
+
+# ❌ Плохо: "умно", но непонятно
+def get_ctx(u: int, c: int) -> dict:
+    return user_contexts.get((u, c)) or {}
+```
+
+### Обработка ошибок
+
+```python
+# ✅ Правильно: всегда возвращаем текст
+try:
+    response = await openai.ChatCompletion.acreate(...)
+    return response.choices[0].message.content
+except openai.RateLimitError:
+    return "⚠️ Слишком много запросов"
+except Exception as e:
+    logger.error(f"Error: {e}")
+    return "❌ Произошла ошибка"
+
+# ❌ Неправильно: пробрасываем исключение
+async def get_response():
+    response = await openai.ChatCompletion.acreate(...)  # Может упасть
+    return response.choices[0].message.content
+```
+
+**Принцип:** Бот никогда не падает, всегда отвечает пользователю.
+
+### Логирование
+
+```python
+# ✅ Правильно: структурировано
+logger.info(f"User {user_id} started conversation")
+logger.info(f"OpenAI request: user_id={user_id}, messages_count={len(messages)}")
+
+# ❌ Неправильно: неструктурировано
+logger.info("User did something")
+logger.info(f"User {user_id} sent: {message.text}")  # Нарушение приватности
+```
+
+**Правило:** Не логируем содержимое сообщений и персональные данные.
+
+### Type hints
+
+```python
+# ✅ Обязательно для публичных функций
+async def get_llm_response(messages: list, user_name: str = None) -> str:
+    ...
+
+# ✅ Для внутренних функций — опционально
+def _trim_context(messages, max_messages=10):
+    ...
+```
+
+### Async/await
+
+```python
+# ✅ Правильно: все I/O операции async
+async def get_llm_response(messages: list) -> str:
+    response = await openai.ChatCompletion.acreate(...)
+    return response.choices[0].message.content
+
+# ❌ Неправильно: блокирующие вызовы
+def get_llm_response(messages: list) -> str:
+    response = openai.ChatCompletion.create(...)  # Блокирует eventloop
+```
+
+---
+
+## Что НЕ делать
+
+- ❌ Сложные паттерны (Repository, UnitOfWork, Factory, Builder)
+- ❌ ORM (используем простой словарь)
+- ❌ Абстракции на будущее
+- ❌ Классы там, где достаточно функций
+- ❌ Множественное наследование
+- ❌ Метапрограммирование
+- ❌ Декораторы для бизнес-логики (только для routes)
+
+---
+
+## Структура файлов
+
+См. [vision.md → Структура проекта](vision.md#3-структура-проекта)
+
+**Правило:** Один файл = одна ответственность, ~100-150 строк.
+
+---
+
+## Именование
+
+```python
+# Функции и переменные: snake_case
+user_context = get_user_context(user_id, chat_id)
+
+# Классы: PascalCase
+class Config:
+    ...
+
+# Константы: UPPER_CASE
+MAX_CONTEXT_MESSAGES = 10
+
+# Приватные: префикс _
+def _internal_helper():
+    ...
+```
+
+---
+
+## Комментарии
+
+```python
+# ✅ Хорошо: объясняем "почему", не "что"
+# Усекаем контекст для экономии токенов
+messages = trim_context(messages, max_messages=10)
+
+# ❌ Плохо: дублируем код
+# Получаем контекст пользователя
+user_context = get_user_context(user_id, chat_id)
+```
+
+**Правило:** Код должен быть самодокументируемым. Комментарии только там, где НЕочевидно.
+
+---
+
+## Тестирование
+
+**Уровень: минимальный** (см. [vision.md → Тестирование](vision.md#2-принципы-разработки))
+
+```python
+# ✅ Тестируем критичное
+def test_trim_context_keeps_system_prompt():
+    messages = [
+        {"role": "system", "content": "System"},
+        *[{"role": "user", "content": f"msg{i}"} for i in range(20)]
+    ]
+    result = trim_context(messages, max_messages=5)
+    assert result[0]["role"] == "system"
+    assert len(result) == 6  # system + 5
+
+# ❌ НЕ тестируем тривиальное
+def test_get_user_context_returns_dict():  # Очевидно из кода
+    ...
+```
+
+---
+
+## Зависимости
+
+См. [vision.md → Технологии](vision.md#1-технологии)
+
+**Правило:** Только то, что указано в vision.md. Новые зависимости — только после обсуждения.
+
+---
+
+## Checklist перед коммитом
+
+- [ ] Код следует KISS принципу
+- [ ] Нет дублирования из vision.md
+- [ ] Обработка ошибок везде
+- [ ] Логирование структурировано
+- [ ] Type hints для публичных функций
+- [ ] Нет "умного" кода
+- [ ] Файл < 200 строк
+- [ ] Работает локально
+
+---
+
+**Версия:** 1.0  
+**Дата:** 2025-10-10  
+**Базируется на:** [vision.md](vision.md) v1.0
+
