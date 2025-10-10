@@ -15,8 +15,9 @@ async def cmd_start(message: Message):
     """Обработчик команды /start"""
     user_name = message.from_user.first_name or "друг"
     user_id = message.from_user.id
+    chat_id = message.chat.id
     
-    logger.info(f"User {user_id} started conversation")
+    logger.info(f"User {user_id} started conversation: user_name={user_name}, chat_id={chat_id}")
     
     await message.answer(
         f"👋 Привет, {user_name}!\n\n"
@@ -29,8 +30,9 @@ async def cmd_start(message: Message):
 async def cmd_help(message: Message):
     """Обработчик команды /help - справка по командам"""
     user_id = message.from_user.id
+    chat_id = message.chat.id
     
-    logger.info(f"User {user_id} requested help")
+    logger.info(f"User {user_id} requested help: chat_id={chat_id}")
     
     help_text = (
         "📖 Доступные команды:\n\n"

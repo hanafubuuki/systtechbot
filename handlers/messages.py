@@ -23,7 +23,7 @@ async def handle_message(message: Message):
     user_name = message.from_user.first_name
     user_message = message.text
     
-    logger.info(f"User {user_id} sent message")
+    logger.info(f"User {user_id} sent message: length={len(user_message) if user_message else 0}, chat_id={chat_id}")
     
     # Получаем существующий контекст
     context = get_context(user_id, chat_id)
@@ -55,6 +55,8 @@ async def handle_message(message: Message):
         save_context(user_id, chat_id, messages, user_name)
         
         await message.answer(response)
+        
+        logger.info(f"User {user_id} received response: length={len(response)}, context_size={len(messages)}")
         
     except Exception as e:
         logger.error(f"Error handling message: {e}")
