@@ -1,6 +1,6 @@
 """Сервис для работы с LLM через OpenAI-совместимое API"""
 import logging
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APIStatusError, APIConnectionError, RateLimitError, APITimeoutError
 
 from config import Config
 
@@ -63,17 +63,22 @@ async def get_llm_response(messages: list, config: Config) -> str:
         
         return answer
         
+    except RateLimitError:
+        logger.error("LLM error: RateLimitError - Too many requests")
+        return "⚠️ Слишком много запросов. Попробуйте через минуту."
+    except APITimeoutError:
+        logger.error("LLM error: APITimeoutError - Request timed out")
+        return "⏱️ Превышено время ожидания ответа."
+    except APIConnectionError as e:
+        logger.error(f"LLM error: APIConnectionError - {e}")
+        return "❌ Не удалось подключиться к сервису. Проверьте ваше интернет-соединение или URL."
+    except APIStatusError as e:
+        logger.error(f"LLM error: APIStatusError - {e.status_code} - {e.response}")
+        if e.status_code == 404:
+            return "❌ Модель не найдена или недоступна. Проверьте название модели."
+        return f"❌ Ошибка сервиса LLM: {e.status_code}. Попробуйте позже."
     except Exception as e:
         error_type = type(e).__name__
         logger.error(f"LLM error: {error_type} - {str(e)}")
-        
-        # Обработка разных типов ошибок
-        if "rate" in str(e).lower() or "429" in str(e):
-            return "⚠️ Слишком много запросов. Попробуйте через минуту."
-        elif "timeout" in str(e).lower():
-            return "⏱️ Превышено время ожидания ответа."
-        elif "connection" in str(e).lower():
-            return "❌ Не удалось подключиться к сервису."
-        else:
-            return "❌ Произошла ошибка при обработке запроса."
+        return "❌ Произошла непредвиденная ошибка при обработке запроса."
 
