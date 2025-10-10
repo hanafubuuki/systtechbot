@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from config import load_config
-from handlers import commands
+from handlers import commands, messages
 
 # Настройка логирования
 logging.basicConfig(
@@ -37,6 +37,7 @@ async def main():
     
     # Регистрация роутеров
     dp.include_router(commands.router)
+    dp.include_router(messages.router)
     
     # Запуск бота
     try:

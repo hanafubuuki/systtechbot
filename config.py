@@ -12,7 +12,7 @@ class Config:
     telegram_token: str
     openai_api_key: str
     openai_base_url: str = "https://api.openai.com/v1"
-    openai_model: str = "anthropic/claude-3.5-sonnet"
+    openai_model: str = "deepseek/deepseek-chat-v3.1:free"
     max_tokens: int = 1000
     temperature: float = 0.7
     max_context_messages: int = 10
@@ -25,7 +25,7 @@ def load_config() -> Config:
         telegram_token=getenv("TELEGRAM_TOKEN", ""),
         openai_api_key=getenv("OPENAI_API_KEY", ""),
         openai_base_url=getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        openai_model=getenv("OPENAI_MODEL", "anthropic/claude-3.5-sonnet"),
+        openai_model=getenv("OPENAI_MODEL", "deepseek/deepseek-chat-v3.1:free"),
         max_tokens=int(getenv("MAX_TOKENS", "1000")),
         temperature=float(getenv("TEMPERATURE", "0.7")),
         openai_timeout=int(getenv("OPENAI_TIMEOUT", "30")),

@@ -7,6 +7,10 @@
 # Логи
 bot.log
 
+# Pytest
+test-output.xml
+.pytest_cache/
+
 # Python
 __pycache__/
 *.pyc
