@@ -32,14 +32,14 @@
 ### Задачи
 
 - [ ] Создать структуру проекта (папки: handlers/, services/, roles/, tests/)
-- [ ] Создать `requirements.txt` с зависимостями
+- [ ] Создать `pyproject.toml` с зависимостями (для uv)
 - [ ] Создать `.env.example` с примерами переменных
-- [ ] Создать `.gitignore` (venv/, .env, bot.log, __pycache__)
-- [ ] Создать `Makefile` с командами (install, run, test, clean)
+- [ ] Создать `.gitignore` (.venv/, .env, bot.log, __pycache__, uv.lock)
+- [ ] Создать `Makefile` с командами для uv (install, run, test, clean)
 
 ### Результат
 
-Запуск `make install` успешно создает venv и устанавливает зависимости.
+Запуск `make install` успешно создает venv через uv и устанавливает зависимости.
 
 ---
 

@@ -177,7 +177,8 @@ git push origin main
 1. Проверь [vision.md → Технологии](vision.md#1-технологии)
 2. Если там нет - спроси у пользователя
 3. Дождись разрешения
-4. Добавь в requirements.txt
+4. Добавь в pyproject.toml (dependencies)
+5. Выполни: uv sync
 ```
 
 **❌ НЕ добавляй зависимости без разрешения!**
@@ -193,16 +194,23 @@ git push origin main
 
 Предлагаю создать:
 
-1. requirements.txt
-aiogram>=3.0.0,<4.0.0
-openai>=1.0.0,<2.0.0
-python-dotenv>=1.0.0,<2.0.0
+1. pyproject.toml
+[project]
+name = "systtechbot"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.0.0,<4.0.0",
+    "openai>=1.0.0,<2.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+]
 
 2. .gitignore
-venv/
+.venv/
 .env
 bot.log
 __pycache__/
+uv.lock
 
 3. Makefile
 [код]

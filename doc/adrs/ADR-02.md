@@ -92,27 +92,20 @@
 ### Структура проекта
 
 ```
-src/
+systtechbot/
 ├── bot.py              # Точка входа
 ├── config.py           # Конфигурация
 ├── handlers/           # Обработчики команд и сообщений
-│   ├── __init__.py
-│   ├── start.py
-│   └── dialog.py
-├── middleware/         # Middleware для контекста
-│   ├── __init__.py
-│   └── context.py
-├── states/             # FSM состояния
-│   ├── __init__.py
-│   └── dialog.py
+│   ├── commands.py     # /start, /help, /clear
+│   └── messages.py     # Обработка текстовых сообщений
 ├── services/           # Бизнес-логика
-│   ├── __init__.py
 │   ├── llm.py         # Интеграция с OpenAI
 │   └── context.py     # Управление контекстом
-└── models/             # Модели данных
-    ├── __init__.py
-    └── role.py
+└── roles/             # Роли для бота
+    └── prompts.py     # System prompts
 ```
+
+**Упрощение:** Без `__init__.py` файлов (Python 3.11+ namespace packages), без FSM состояний (используем простой словарь), без middleware (не нужно для MVP).
 
 ### Зависимости
 

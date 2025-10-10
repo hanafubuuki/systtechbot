@@ -11,16 +11,28 @@
 ### Стек
 
 - **Python 3.11+** — основной язык
+- **uv** — современный менеджер пакетов (быстрее pip)
 - **aiogram 3.x** — фреймворк для Telegram Bot API
 - **openai** — SDK для OpenAI API
 - **python-dotenv** — конфигурация через .env
 
-### Зависимости (requirements.txt)
+### Зависимости (pyproject.toml)
 
-```
-aiogram>=3.0.0,<4.0.0
-openai>=1.0.0,<2.0.0
-python-dotenv>=1.0.0,<2.0.0
+```toml
+[project]
+name = "systtechbot"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.0.0,<4.0.0",
+    "openai>=1.0.0,<2.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
 ```
 
 ### Хранение данных
@@ -71,7 +83,8 @@ systtechbot/
 ├── .env                    # Конфигурация
 ├── .env.example
 ├── .gitignore
-├── requirements.txt
+├── pyproject.toml          # Зависимости (uv)
+├── uv.lock                 # Lock-файл зависимостей
 ├── README.md
 ├── Makefile                # Команды для запуска
 │
@@ -79,21 +92,17 @@ systtechbot/
 ├── config.py               # Настройки
 │
 ├── handlers/               # Обработчики Telegram
-│   ├── __init__.py
 │   ├── commands.py         # /start, /help, /clear
 │   └── messages.py         # Обработка сообщений
 │
 ├── services/               # Бизнес-логика
-│   ├── __init__.py
 │   ├── llm.py             # OpenAI API
 │   └── context.py         # Управление контекстом
 │
 ├── roles/                  # Роли бота
-│   ├── __init__.py
 │   └── prompts.py         # System prompts
 │
 ├── tests/                  # Тесты
-│   ├── __init__.py
 │   ├── test_llm.py
 │   └── test_context.py
 │
@@ -368,21 +377,21 @@ grep "ERROR" bot.log
 .PHONY: help install run test clean
 
 help:
-	@echo "make install  - Установить зависимости"
+	@echo "make install  - Установить зависимости через uv"
 	@echo "make run      - Запустить бота"
 	@echo "make test     - Запустить тесты"
 	@echo "make clean    - Очистить временные файлы"
 
 install:
-	python -m venv venv
-	./venv/bin/pip install -r requirements.txt
-	cp .env.example .env
+	uv venv
+	uv sync
+	cp .env.example .env || true
 
 run:
-	./venv/bin/python bot.py
+	uv run bot.py
 
 test:
-	./venv/bin/pytest tests/ -v
+	uv run pytest tests/ -v
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -392,6 +401,10 @@ clean:
 ### Быстрый старт
 
 ```bash
+# 0. Установить uv (если еще нет)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# или: pip install uv
+
 # 1. Клонировать
 git clone <repo-url>
 cd systtechbot
@@ -429,6 +442,27 @@ OPENAI_API_KEY=sk-proj-xxx...
 # MAX_TOKENS=1000
 # TEMPERATURE=0.7
 # MAX_CONTEXT_MESSAGES=10
+```
+
+### .gitignore
+
+```gitignore
+# Виртуальное окружение (uv создает .venv)
+.venv/
+
+# Секреты
+.env
+
+# Логи
+bot.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# uv lock файл (опционально, можно коммитить)
+# uv.lock
 ```
 
 ---
