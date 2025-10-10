@@ -25,6 +25,24 @@ async def cmd_start(message: Message):
     )
 
 
+@router.message(Command("help"))
+async def cmd_help(message: Message):
+    """Обработчик команды /help - справка по командам"""
+    user_id = message.from_user.id
+    
+    logger.info(f"User {user_id} requested help")
+    
+    help_text = (
+        "📖 Доступные команды:\n\n"
+        "/start - Начать общение с ботом\n"
+        "/help - Показать эту справку\n"
+        "/clear - Очистить историю диалога\n\n"
+        "💬 Просто напиши мне сообщение, и я отвечу!"
+    )
+    
+    await message.answer(help_text)
+
+
 @router.message(Command("clear"))
 async def cmd_clear(message: Message):
     """Обработчик команды /clear - очистка истории диалога"""
