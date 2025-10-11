@@ -2,7 +2,7 @@
   // Python
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.terminal.activateEnvironment": true,
-  
+
   // Testing
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
@@ -11,7 +11,7 @@
     "-v"
   ],
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
-  
+
   // Linting & Formatting
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": false,
@@ -20,7 +20,7 @@
     "--strict",
     "--ignore-missing-imports"
   ],
-  
+
   // Ruff (Formatter + Linter)
   "ruff.enable": true,
   "ruff.lint.enable": true,
@@ -28,7 +28,7 @@
     "--line-length=100"
   ],
   "ruff.organizeImports": true,
-  
+
   // Format on save
   "[python]": {
     "editor.formatOnSave": true,
@@ -38,7 +38,7 @@
       "source.fixAll": "explicit"
     }
   },
-  
+
   // Editor
   "editor.rulers": [100],
   "editor.tabSize": 4,
@@ -46,7 +46,7 @@
   "editor.trimAutoWhitespace": true,
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  
+
   // Files to exclude from explorer
   "files.exclude": {
     "**/__pycache__": true,
@@ -57,7 +57,7 @@
     "htmlcov": true,
     ".coverage": true
   },
-  
+
   // Search exclusions
   "search.exclude": {
     "**/__pycache__": true,
@@ -68,24 +68,24 @@
     "htmlcov": true,
     "uv.lock": true
   },
-  
+
   // Terminal
   "terminal.integrated.env.windows": {
     "PYTHONPATH": "${workspaceFolder}"
   },
-  
+
   // File associations
   "files.associations": {
     "*.mdc": "markdown",
     ".env.example": "properties"
   },
-  
+
   // Coverage
   "coverage-gutters.coverageFileNames": [
     "coverage.xml",
     "htmlcov/index.html"
   ],
-  
+
   // Auto save
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000

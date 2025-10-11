@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 
-from handlers.commands import cmd_clear, cmd_help, cmd_start
+from handlers.commands import cmd_clear, cmd_help, cmd_role, cmd_start
 
 
 @pytest.fixture
@@ -161,3 +161,19 @@ async def test_cmd_help_has_emoji(mock_message):
 
     call_args = mock_message.answer.call_args[0][0]
     assert "📖" in call_args or "💬" in call_args
+
+
+@pytest.mark.asyncio
+async def test_cmd_role(mock_message):
+    """Тест команды /role отображает информацию о роли бота"""
+    await cmd_role(mock_message)
+
+    # Проверяем что ответ был отправлен
+    mock_message.answer.assert_called_once()
+
+    # Проверяем содержимое ответа
+    call_args = mock_message.answer.call_args[0][0]
+    assert "Daily Reporter" in call_args
+    assert "📊" in call_args
+    assert "Структурировании информации" in call_args
+    assert "ежедневной отчетности" in call_args

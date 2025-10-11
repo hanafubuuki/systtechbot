@@ -6,6 +6,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from roles.prompts import ROLE_INFO
 from services.context import clear_context
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ async def cmd_help(message: Message) -> None:
 /start - Начать общение
 /help - Показать эту справку
 /clear - Очистить историю
+/role - Показать информацию о роли бота
 
 💬 Просто напишите мне сообщение, и я отвечу!"""
 
@@ -67,3 +69,14 @@ async def cmd_clear(message: Message) -> None:
     logger.info(f"User {user_id} cleared context in chat {chat_id}")
 
     await message.answer("🗑️ История диалога очищена!")
+
+
+@router.message(Command("role"))
+async def cmd_role(message: Message) -> None:
+    """Обработчик команды /role - показать информацию о роли бота"""
+    if not message.from_user:
+        return
+
+    logger.info(f"User {message.from_user.id} requested role info")
+
+    await message.answer(ROLE_INFO)

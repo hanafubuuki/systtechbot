@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 # Code Conventions для systtechbot
 
@@ -543,17 +543,17 @@ def get_name() -> str | None:
 ```python
 def trim_context(messages: list[dict], max_messages: int = 10) -> list[dict]:
     """Усечь контекст до максимального количества сообщений.
-    
+
     Всегда сохраняет system prompt (первое сообщение, если его role == "system").
     Если сообщений меньше или равно лимиту, возвращает как есть.
-    
+
     Args:
         messages: Список сообщений в формате OpenAI API
         max_messages: Максимальное количество сообщений (не считая system prompt)
-        
+
     Returns:
         Усеченный список сообщений с сохранением system prompt
-        
+
     Example:
         >>> messages = [
         ...     {"role": "system", "content": "You are AI"},
@@ -566,10 +566,10 @@ def trim_context(messages: list[dict], max_messages: int = 10) -> list[dict]:
     """
     if len(messages) <= max_messages + 1:
         return messages
-    
+
     system_prompt = messages[0] if messages[0]["role"] == "system" else None
     recent_messages = messages[-(max_messages):]
-    
+
     if system_prompt:
         return [system_prompt] + recent_messages
     return recent_messages
@@ -781,7 +781,7 @@ make quality
 
 ---
 
-**Версия:** 2.0  
-**Дата:** 2025-10-11 (обновлено)  
-**Базируется на:** [vision.md](../../doc/vision.md) v1.0  
+**Версия:** 2.0
+**Дата:** 2025-10-11 (обновлено)
+**Базируется на:** [vision.md](../../doc/vision.md) v1.0
 **Изменения:** Добавлены разделы о качестве кода, форматировании, линтинге, типизации, документировании, лучших практиках Python

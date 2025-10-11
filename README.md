@@ -51,7 +51,7 @@ Telegram бот с интеграцией LLM (через OpenRouter/OpenAI-со
    ```bash
    make install
    ```
-   
+
    Или вручную:
    ```bash
    uv venv
@@ -62,12 +62,12 @@ Telegram бот с интеграцией LLM (через OpenRouter/OpenAI-со
    ```bash
    cp .env.example .env
    ```
-   
+
    Заполните `.env`:
    ```ini
    TELEGRAM_TOKEN=your_telegram_bot_token_here
    OPENAI_API_KEY=your_openai_or_openrouter_api_key_here
-   
+
    # Опционально (для OpenRouter):
    OPENAI_BASE_URL=https://openrouter.ai/api/v1
    OPENAI_MODEL=openai/gpt-oss-20b:free
@@ -77,7 +77,7 @@ Telegram бот с интеграцией LLM (через OpenRouter/OpenAI-со
    ```bash
    make run
    ```
-   
+
    Или вручную:
    ```bash
    uv run bot.py
@@ -223,7 +223,7 @@ systtechbot/
 │   ├── llm.py            # Работа с LLM API
 │   └── context.py        # Управление контекстом
 ├── roles/                 # Промпты и роли
-│   └── prompts.py        
+│   └── prompts.py
 ├── tests/                 # Тесты
 │   ├── test_commands.py
 │   ├── test_context.py
@@ -297,5 +297,5 @@ MIT
 
 ---
 
-**Версия:** 0.1.0 (MVP)  
+**Версия:** 0.1.0 (MVP)
 **Дата:** 2025-10-10

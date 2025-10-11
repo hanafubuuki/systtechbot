@@ -1,6 +1,6 @@
 # План технического долга systtechbot
 
-**Базовые документы:** [vision.md](vision.md) | [conventions.mdc](../.cursor/rules/conventions.mdc) | [workflow.mdc](../.cursor/rules/workflow.mdc)  
+**Базовые документы:** [vision.md](vision.md) | [conventions.mdc](../.cursor/rules/conventions.mdc) | [workflow.mdc](../.cursor/rules/workflow.mdc)
 **Принцип:** Улучшение качества кода итерациями с сохранением работоспособности
 
 **Основание:** Code review от Senior Python Tech Lead (2025-10-11)
@@ -25,7 +25,7 @@
 
 ## Итерация 0: Инструменты качества кода
 
-**Цель:** Настроить автоматизированные инструменты для контроля качества  
+**Цель:** Настроить автоматизированные инструменты для контроля качества
 **Тестируемость:** `make quality` запускается без ошибок
 
 ### Задачи
@@ -133,7 +133,7 @@ make quality
 
 ## Итерация 1: Критичный рефакторинг
 
-**Цель:** Исправить критичные проблемы архитектуры  
+**Цель:** Исправить критичные проблемы архитектуры
 **Тестируемость:** Все тесты проходят, бот работает
 
 ### Задачи
@@ -236,7 +236,7 @@ make quality
 
 ## Итерация 2: Строгая типизация
 
-**Цель:** Добавить type hints везде, пройти mypy без ошибок  
+**Цель:** Добавить type hints везде, пройти mypy без ошибок
 **Тестируемость:** `mypy` проходит с 0 ошибками
 
 ### Задачи
@@ -326,7 +326,7 @@ make quality
 
 ## Итерация 3: Расширение тестового покрытия
 
-**Цель:** Довести coverage до 80%+  
+**Цель:** Довести coverage до 80%+
 **Тестируемость:** `make coverage` показывает 80%+ покрытие
 
 ### Задачи
@@ -366,17 +366,17 @@ async def test_llm_response_success(mock_config):
     mock_response.choices = [
         AsyncMock(message=AsyncMock(content="Test response"))
     ]
-    
+
     with patch("services.llm.AsyncOpenAI") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_client_cls.return_value = mock_client
-        
+
         result = await get_llm_response(
-            [{"role": "user", "content": "Hi"}], 
+            [{"role": "user", "content": "Hi"}],
             mock_config
         )
-        
+
         assert result == "Test response"
 
 
@@ -385,17 +385,17 @@ async def test_llm_response_empty(mock_config):
     """Тест пустого ответа от LLM"""
     mock_response = AsyncMock()
     mock_response.choices = []
-    
+
     with patch("services.llm.AsyncOpenAI") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_client_cls.return_value = mock_client
-        
+
         result = await get_llm_response(
-            [{"role": "user", "content": "Hi"}], 
+            [{"role": "user", "content": "Hi"}],
             mock_config
         )
-        
+
         assert "пустой ответ" in result.lower()
 
 
@@ -406,17 +406,17 @@ async def test_llm_markdown_cleanup(mock_config):
     mock_response.choices = [
         AsyncMock(message=AsyncMock(content="**Bold** and *italic* text"))
     ]
-    
+
     with patch("services.llm.AsyncOpenAI") as mock_client_cls:
         mock_client = AsyncMock()
         mock_client.chat.completions.create.return_value = mock_response
         mock_client_cls.return_value = mock_client
-        
+
         result = await get_llm_response(
-            [{"role": "user", "content": "Hi"}], 
+            [{"role": "user", "content": "Hi"}],
             mock_config
         )
-        
+
         assert "**" not in result
         assert "*" not in result
 ```
@@ -500,7 +500,7 @@ make coverage
 
 ## Итерация 4: Финальная полировка
 
-**Цель:** Привести код в идеальное состояние  
+**Цель:** Привести код в идеальное состояние
 **Тестируемость:** Все проверки `make quality` проходят
 
 ### Задачи
@@ -539,16 +539,16 @@ make quality    # Полная проверка качества
 ```python
 def trim_context(messages: list, max_messages: int = 10) -> list:
     """Усечь контекст до максимального количества сообщений.
-    
+
     Всегда сохраняет system prompt (первое сообщение).
-    
+
     Args:
         messages: Список сообщений в формате OpenAI
         max_messages: Максимальное количество сообщений (не считая system)
-        
+
     Returns:
         Усеченный список сообщений с сохранением system prompt
-        
+
     Example:
         >>> msgs = [{"role": "system", ...}, {"role": "user", ...}, ...]
         >>> trim_context(msgs, max_messages=5)
@@ -670,7 +670,7 @@ make run         # Запустить бота
 ### Итерация 2: Строгая типизация
 
 **4. Проблема: 12 ошибок типизации mypy**
-- **Описание:** 
+- **Описание:**
   - `handlers/commands.py:` 7 ошибок (отсутствие return type, `message.from_user` может быть None)
   - `handlers/messages.py:` 3 ошибки (аналогично)
   - `roles/prompts.py:` 1 ошибка (`str = None` вместо `str | None = None`)
@@ -760,8 +760,8 @@ make run         # Запустить бота
 
 ---
 
-**Версия:** 1.0  
-**Дата создания:** 2025-10-11  
-**Основание:** Code review (Senior Python Tech Lead)  
+**Версия:** 1.0
+**Дата создания:** 2025-10-11
+**Основание:** Code review (Senior Python Tech Lead)
 **Связанные документы:** [vision.md](vision.md) | [tasklist.md](tasklist.md) | [conventions.mdc](../.cursor/rules/conventions.mdc)
 

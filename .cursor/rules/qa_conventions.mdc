@@ -1,0 +1,502 @@
+---
+alwaysApply: false
+---
+# QA Conventions для systtechbot
+
+**Подход:** Test-Driven Development (TDD)
+**Базовые принципы:** KISS, DRY, минимальный достаточный coverage
+
+---
+
+## TDD Workflow
+
+### Red → Green → Refactor
+
+```python
+# 1. RED: Пишем тест (он падает)
+def test_trim_context_preserves_system_prompt():
+    messages = [{"role": "system", "content": "prompt"}, ...]
+    result = trim_context(messages, max_messages=5)
+    assert result[0]["role"] == "system"
+
+# 2. GREEN: Пишем минимальный код для прохождения теста
+def trim_context(messages: list, max_messages: int) -> list:
+    return [messages[0]] + messages[-max_messages:]
+
+# 3. REFACTOR: Улучшаем код, тесты остаются зелеными
+```
+
+**Правило:** Сначала тест, потом реализация. Не пиши код без теста.
+
+---
+
+## Что тестировать
+
+### ✅ Тестируем
+
+- **Критичная бизнес-логика** (обработка контекста, вызовы LLM)
+- **Граничные случаи** (пустые значения, None, превышение лимитов)
+- **Обработка ошибок** (API errors, timeouts, rate limits)
+- **Интеграционные точки** (handlers → services)
+
+### ❌ НЕ тестируем
+
+- **Тривиальный код** (геттеры/сеттеры, простые свойства)
+- **Библиотечные функции** (aiogram, openai — они протестированы)
+- **Константы и Enums** (не содержат логики)
+- **Логирование** (не бизнес-логика)
+
+### Примеры
+
+```python
+# ✅ ТЕСТИРУЕМ: критичная логика
+def test_trim_context_keeps_system_prompt():
+    """System prompt должен сохраняться при усечении"""
+    ...
+
+# ✅ ТЕСТИРУЕМ: граничный случай
+def test_get_context_returns_empty_for_new_user():
+    """Новый пользователь получает пустой контекст"""
+    ...
+
+# ✅ ТЕСТИРУЕМ: обработка ошибок
+@pytest.mark.asyncio
+async def test_llm_handles_rate_limit_error():
+    """RateLimitError возвращает понятное сообщение"""
+    ...
+
+# ❌ НЕ ТЕСТИРУЕМ: тривиальное
+def test_user_contexts_is_dict():  # Очевидно из аннотации типа
+    assert isinstance(user_contexts, dict)
+
+# ❌ НЕ ТЕСТИРУЕМ: библиотечный код
+def test_openai_api_works():  # Не наша ответственность
+    ...
+```
+
+**Целевой coverage:** 80%+ для services/, handlers/. Roles/, constants — не критично.
+
+---
+
+## Структура тестов
+
+### Организация
+
+```
+tests/
+├── test_commands.py      # Тесты команд бота
+├── test_context.py       # Тесты управления контекстом
+├── test_llm.py           # Тесты LLM сервиса (с моками)
+├── test_messages.py      # Тесты обработки сообщений
+└── test_config.py        # Тесты конфигурации
+```
+
+**Правило:** Один test файл = один модуль проекта.
+
+### Именование тестов
+
+```python
+# ✅ ХОРОШО: описательное название
+def test_trim_context_preserves_system_prompt():
+def test_cmd_clear_uses_correct_user_id():
+async def test_llm_returns_fallback_on_timeout():
+
+# ❌ ПЛОХО: неясное название
+def test_context_1():
+def test_functionality():
+```
+
+**Формат:** `test_<что_тестируем>_<ожидаемое_поведение>`
+
+### Docstrings в тестах
+
+```python
+# ✅ ХОРОШО: короткий docstring поясняет "почему"
+def test_trim_context_with_no_system_prompt():
+    """Усечение работает даже если нет system prompt"""
+    ...
+
+# ✅ ХОРОШО: нет docstring если название говорящее
+def test_user_id_is_integer():
+    ...
+
+# ❌ ПЛОХО: docstring дублирует название
+def test_get_user_context():
+    """Тест функции get_user_context"""  # Избыточно
+    ...
+```
+
+---
+
+## Фикстуры
+
+### Стандартные фикстуры
+
+```python
+# ✅ Переиспользуемая фикстура
+@pytest.fixture
+def mock_config():
+    """Mock конфигурации для тестов"""
+    return Config(
+        telegram_token="test",
+        openai_api_key="test_key",
+        openai_base_url="https://test.api",
+        openai_model="gpt-test",
+    )
+
+# ✅ Autouse фикстура для очистки состояния
+@pytest.fixture(autouse=True)
+def clear_contexts():
+    """Очистка глобального состояния перед каждым тестом"""
+    user_contexts.clear()
+    yield
+    user_contexts.clear()
+
+# ✅ Mock для aiogram Message
+@pytest.fixture
+def mock_message():
+    """Mock объекта Message от aiogram"""
+    message = MagicMock()
+    message.from_user.id = 12345
+    message.chat.id = 67890
+    message.answer = AsyncMock()
+    return message
+```
+
+**Правило:** Фикстура = переиспользуемый тестовый объект. Не дублируй создание моков.
+
+### Scope фикстур
+
+```python
+# ✅ function (default) — создается для каждого теста
+@pytest.fixture
+def clean_state():
+    ...
+
+# ✅ module — создается один раз для модуля (экономия времени)
+@pytest.fixture(scope="module")
+def expensive_resource():
+    ...
+
+# ❌ session — избегай (состояние между тестами)
+```
+
+---
+
+## Моки и патчинг
+
+### Правила мокирования
+
+```python
+# ✅ ПРАВИЛЬНО: мокируй внешние вызовы
+@pytest.mark.asyncio
+async def test_llm_response_success():
+    with patch("services.llm.AsyncOpenAI") as mock_client:
+        mock_client.return_value.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
+        result = await get_llm_response([...], config)
+        assert "Expected" in result
+
+# ✅ ПРАВИЛЬНО: мокируй на уровне импорта
+with patch("handlers.commands.clear_context") as mock_clear:
+    await cmd_clear(message)
+    mock_clear.assert_called_once_with(user_id, chat_id)
+
+# ❌ НЕПРАВИЛЬНО: мокируй слишком много
+with patch("services.llm.AsyncOpenAI") as m1, \
+     patch("services.context.get_context") as m2, \
+     patch("handlers.messages.Message") as m3:  # Слишком сложно
+    ...
+```
+
+**Принцип:** Мокируй только то, что вне твоего контроля (API, IO, библиотеки).
+
+### Что мокировать
+
+| Мокируем | Не мокируем |
+|----------|-------------|
+| Внешние API (OpenAI) | Свою бизнес-логику |
+| Сетевые вызовы | Простые функции |
+| Telegram Bot API | Константы |
+| Время (datetime.now) | Словари/списки |
+| File I/O | Type hints |
+
+---
+
+## Параметризованные тесты
+
+```python
+# ✅ ХОРОШО: параметризация для множества кейсов
+@pytest.mark.parametrize("input_len,max_msg,expected", [
+    (5, 10, 5),      # Меньше лимита
+    (10, 10, 10),    # Равно лимиту
+    (25, 10, 11),    # Больше лимита (+ system prompt)
+])
+def test_trim_context_various_lengths(input_len, max_msg, expected):
+    messages = [{"role": "system", "content": "S"}] + \
+               [{"role": "user", "content": f"m{i}"} for i in range(input_len-1)]
+    result = trim_context(messages, max_msg)
+    assert len(result) == expected
+
+# ❌ ПЛОХО: 3 отдельных теста с дублированием кода
+def test_trim_context_less_than_limit():
+    ...
+def test_trim_context_equal_to_limit():
+    ...
+def test_trim_context_more_than_limit():
+    ...
+```
+
+**Правило:** Если логика одинаковая, меняются только входные данные → параметризуй.
+
+---
+
+## Async тесты
+
+```python
+# ✅ ПРАВИЛЬНО: используй @pytest.mark.asyncio
+@pytest.mark.asyncio
+async def test_get_llm_response():
+    result = await get_llm_response(messages, config)
+    assert isinstance(result, str)
+
+# ✅ ПРАВИЛЬНО: AsyncMock для async функций
+mock_message.answer = AsyncMock()
+await cmd_start(mock_message)
+mock_message.answer.assert_called_once()
+
+# ❌ НЕПРАВИЛЬНО: обычный MagicMock для async
+mock_message.answer = MagicMock()  # Не сработает с await
+```
+
+**Правило:** Весь async код требует `@pytest.mark.asyncio` и `AsyncMock`.
+
+---
+
+## Assertions
+
+### Используй pytest assertions
+
+```python
+# ✅ ХОРОШО: прямые pytest assertions
+assert result == expected
+assert "error" in response
+assert len(messages) > 0
+assert user_id is not None
+
+# ❌ ПЛОХО: unittest assertions
+self.assertEqual(result, expected)
+self.assertIn("error", response)
+self.assertTrue(len(messages) > 0)
+
+# ✅ ХОРОШО: проверка исключений
+with pytest.raises(ValueError, match="Invalid user"):
+    process_user(-1)
+
+# ✅ ХОРОШО: проверка вызовов моков
+mock_clear.assert_called_once_with(user_id, chat_id)
+mock_answer.assert_called()
+```
+
+### Множественные assertions
+
+```python
+# ✅ ДОПУСТИМО: проверяем связанные аспекты
+def test_cmd_start_response():
+    await cmd_start(message)
+    call_args = message.answer.call_args[0][0]
+
+    assert "Привет" in call_args
+    assert "AI-ассистент" in call_args
+    assert message.answer.call_count == 1
+
+# ❌ ИЗБЕГАЙ: несвязанные проверки в одном тесте
+def test_multiple_things():
+    assert get_context(...) == {}  # Тест 1
+    assert trim_context(...) == []  # Тест 2 (разные вещи!)
+```
+
+**Правило:** Один тест = одна концепция. Несколько assertions OK, если проверяют одно.
+
+---
+
+## Обработка ошибок
+
+```python
+# ✅ ТЕСТИРУЕМ все типы ошибок
+@pytest.mark.asyncio
+async def test_llm_rate_limit_error():
+    """RateLimitError → понятное сообщение пользователю"""
+    with patch("services.llm.AsyncOpenAI") as mock:
+        mock.return_value.chat.completions.create = AsyncMock(
+            side_effect=RateLimitError("Rate limit", response=..., body=None)
+        )
+        result = await get_llm_response([...], config)
+        assert "Слишком много запросов" in result
+        assert "⚠️" in result
+
+# ✅ ТЕСТИРУЕМ edge cases
+async def test_llm_empty_response():
+    """Пустой ответ от LLM обрабатывается корректно"""
+    mock_response.choices = []
+    result = await get_llm_response([...], config)
+    assert "пустой ответ" in result
+```
+
+**Правило:** Каждый `except` в коде = минимум один тест.
+
+---
+
+## Coverage
+
+### Запуск с покрытием
+
+```bash
+# Полный coverage report
+make coverage
+
+# HTML отчет
+uv run pytest --cov=. --cov-report=html
+```
+
+### Целевые метрики
+
+| Модуль | Целевой coverage |
+|--------|------------------|
+| services/ | ≥ 85% |
+| handlers/ | ≥ 80% |
+| config.py | ≥ 70% |
+| roles/ | не критично |
+| constants.py | не критично |
+
+**Правило:** Coverage — метрика качества, не цель. 80%+ достаточно.
+
+---
+
+## Практики
+
+### AAA Pattern
+
+```python
+# ✅ Arrange → Act → Assert
+def test_clear_context():
+    # Arrange
+    user_contexts[(user_id, chat_id)] = {"messages": [...]}
+
+    # Act
+    clear_context(user_id, chat_id)
+
+    # Assert
+    assert (user_id, chat_id) not in user_contexts
+```
+
+### Избегай дублирования
+
+```python
+# ❌ ПЛОХО: дублирование в каждом тесте
+def test_feature_1():
+    config = Config(telegram_token="test", openai_api_key="test", ...)
+    ...
+
+def test_feature_2():
+    config = Config(telegram_token="test", openai_api_key="test", ...)
+    ...
+
+# ✅ ХОРОШО: фикстура
+@pytest.fixture
+def mock_config():
+    return Config(telegram_token="test", openai_api_key="test", ...)
+
+def test_feature_1(mock_config):
+    ...
+
+def test_feature_2(mock_config):
+    ...
+```
+
+### Изоляция тестов
+
+```python
+# ✅ ПРАВИЛЬНО: каждый тест независим
+@pytest.fixture(autouse=True)
+def reset_state():
+    """Сбрасываем глобальное состояние"""
+    user_contexts.clear()
+    yield
+    user_contexts.clear()
+
+# ❌ НЕПРАВИЛЬНО: тесты зависят от порядка
+def test_add_context():
+    user_contexts[(1, 2)] = {...}  # Оставляет состояние
+
+def test_get_context():
+    result = user_contexts.get((1, 2))  # Зависит от предыдущего!
+```
+
+**Правило:** Тесты должны проходить в любом порядке.
+
+---
+
+## Чего НЕ делать
+
+- ❌ Тестировать приватные функции напрямую (тестируй через публичный API)
+- ❌ Создавать тесты "для галочки" (100% coverage ≠ качество)
+- ❌ Мокировать свой код (мокируй только внешние зависимости)
+- ❌ Писать огромные тесты (>30 строк = разбить)
+- ❌ Использовать реальные API в тестах (всегда моки)
+- ❌ Тестировать несколько модулей в одном файле
+- ❌ Хардкодить значения без смысла (magic numbers)
+
+---
+
+## TDD Checklist
+
+### Перед написанием кода
+
+- [ ] Есть четкое понимание требований
+- [ ] Написан failing test (RED)
+- [ ] Тест проверяет одно конкретное поведение
+
+### После написания кода
+
+- [ ] Тест проходит (GREEN)
+- [ ] Код минимальный (не больше, чем нужно для теста)
+- [ ] Нет дублирования (DRY)
+- [ ] Код прост и понятен (KISS)
+
+### Refactoring
+
+- [ ] Все тесты зеленые
+- [ ] Coverage не упал
+- [ ] `make quality` проходит
+
+---
+
+## Запуск тестов
+
+```bash
+# Все тесты
+make test
+
+# Конкретный файл
+uv run pytest tests/test_context.py -v
+
+# Конкретный тест
+uv run pytest tests/test_context.py::test_clear_context -v
+
+# С coverage
+make coverage
+
+# Параллельный запуск (быстрее)
+uv run pytest -n auto
+
+# Только failed тесты (debugging)
+uv run pytest --lf
+```
+
+---
+
+**Версия:** 1.0
+**Дата:** 2025-10-11
+**Базируется на:** conventions.mdc v2.0
