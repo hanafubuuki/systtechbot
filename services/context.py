@@ -4,13 +4,14 @@ import logging
 from datetime import datetime
 
 from constants import MessageRole
+from message_types import Message
 
 logger = logging.getLogger(__name__)
 
 # Глобальное хранилище контекстов
 # Ключ: (user_id, chat_id)
 # Значение: {"messages": [...], "user_name": str, "last_activity": datetime}
-user_contexts = {}
+user_contexts: dict[tuple[int, int], dict] = {}
 
 
 def get_context(user_id: int, chat_id: int) -> dict:
@@ -28,7 +29,9 @@ def get_context(user_id: int, chat_id: int) -> dict:
     return user_contexts.get(key, {"messages": []})
 
 
-def save_context(user_id: int, chat_id: int, messages: list, user_name: str = None):
+def save_context(
+    user_id: int, chat_id: int, messages: list[Message], user_name: str | None = None
+) -> None:
     """
     Сохранить контекст пользователя
 
@@ -49,7 +52,7 @@ def save_context(user_id: int, chat_id: int, messages: list, user_name: str = No
     )
 
 
-def clear_context(user_id: int, chat_id: int):
+def clear_context(user_id: int, chat_id: int) -> None:
     """
     Очистить контекст пользователя
 
@@ -63,7 +66,7 @@ def clear_context(user_id: int, chat_id: int):
         logger.info(f"Context cleared for user {user_id} in chat {chat_id}")
 
 
-def trim_context(messages: list, max_messages: int = 10) -> list:
+def trim_context(messages: list[Message], max_messages: int = 10) -> list[Message]:
     """
     Усечь контекст до максимального количества сообщений
     Всегда сохраняет system prompt (первое сообщение)

@@ -16,8 +16,11 @@ router = Router()
 
 
 @router.message()
-async def handle_message(message: Message):
+async def handle_message(message: Message) -> None:
     """Обработчик всех текстовых сообщений (кроме команд)"""
+    if not message.from_user or not message.bot:
+        return
+
     config = load_config()  # Загружаем конфигурацию внутри функции
 
     user_id = message.from_user.id

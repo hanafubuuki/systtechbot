@@ -13,8 +13,11 @@ router = Router()
 
 
 @router.message(Command("start"))
-async def cmd_start(message: Message):
+async def cmd_start(message: Message) -> None:
     """Обработчик команды /start"""
+    if not message.from_user:
+        return
+
     user_name = message.from_user.first_name if message.from_user.first_name else "друг"
     user_id = message.from_user.id
     chat_id = message.chat.id
@@ -33,8 +36,11 @@ async def cmd_start(message: Message):
 
 
 @router.message(Command("help"))
-async def cmd_help(message: Message):
+async def cmd_help(message: Message) -> None:
     """Обработчик команды /help"""
+    if not message.from_user:
+        return
+
     logger.info(f"User {message.from_user.id} requested help")
 
     help_text = """📖 Доступные команды:
@@ -49,8 +55,11 @@ async def cmd_help(message: Message):
 
 
 @router.message(Command("clear"))
-async def cmd_clear(message: Message):
+async def cmd_clear(message: Message) -> None:
     """Обработчик команды /clear"""
+    if not message.from_user:
+        return
+
     user_id = message.from_user.id
     chat_id = message.chat.id
 

@@ -114,6 +114,7 @@ systtechbot/
 ├── bot.py                  # 🎯 Точка входа
 ├── config.py               # Настройки
 ├── constants.py            # Константы (Enums)
+├── message_types.py        # Типы данных (TypedDict)
 │
 ├── handlers/               # Обработчики Telegram
 │   ├── commands.py         # /start, /help, /clear

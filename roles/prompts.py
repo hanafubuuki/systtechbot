@@ -14,7 +14,7 @@ DEFAULT_SYSTEM_PROMPT = """Ты — полезный AI-ассистент.
 """
 
 
-def get_system_prompt(user_name: str = None) -> str:
+def get_system_prompt(user_name: str | None = None) -> str:
     """Получить системный промпт с персонализацией"""
     if user_name:
         return DEFAULT_SYSTEM_PROMPT + f"\n\nИмя пользователя: {user_name}"
