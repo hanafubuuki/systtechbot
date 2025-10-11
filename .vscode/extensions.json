@@ -1,0 +1,33 @@
+{
+  "recommendations": [
+    // Python
+    "ms-python.python",
+    "ms-python.debugpy",
+    
+    // Ruff (Formatter + Linter)
+    "charliermarsh.ruff",
+    
+    // Code quality
+    "ms-python.mypy-type-checker",
+    "ryanluker.vscode-coverage-gutters",
+    
+    // Testing
+    "littlefoxteam.vscode-python-test-adapter",
+    
+    // Markdown
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    
+    // Git
+    "eamodio.gitlens",
+    
+    // Utilities
+    "gruntfuggly.todo-tree",
+    "wayou.vscode-todo-highlight",
+    "editorconfig.editorconfig",
+    
+    // Environment
+    "mikestead.dotenv"
+  ]
+}
+

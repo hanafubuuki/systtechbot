@@ -1,9 +1,9 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 # Workflow разработки systtechbot
 
-**Для:** Code Assistant (Cursor AI, GitHub Copilot, и т.д.)  
+**Для:** Code Assistant (Cursor AI, GitHub Copilot, и т.д.)
 **Документы:** [vision.md](../../doc/vision.md) | [conventions.mdc](conventions.mdc) | [tasklist.md](../../doc/tasklist.md)
 
 ---
@@ -37,14 +37,14 @@ alwaysApply: true
 2. Предложи решение с **отрезками кода**:
    ```
    Итерация N: [Название]
-   
+
    Задача 1: [название]
    Файл: path/to/file.py
    Код:
    ```python
    # предложенный код
    ```
-   
+
    Задача 2: ...
    ```
 3. Объясни подход **кратко**
@@ -76,7 +76,7 @@ alwaysApply: true
    ```
    ✅ Создан: path/to/file.py
    ✅ Изменен: path/to/other.py
-   
+
    Готово к тестированию.
    ```
 2. Напомни тест из tasklist.md
@@ -99,7 +99,7 @@ alwaysApply: true
 2. Пример изменения:
    ```markdown
    | 0 | Инфраструктура | ✅ Завершено | 5/5 | make install работает | 2025-10-10 |
-   
+
    **Прогресс:** 5/25 задач (20%)
    ```
 
@@ -130,12 +130,12 @@ git push origin main
 1. Спроси разрешение:
    ```
    Итерация N завершена ✅
-   
+
    Следующая: Итерация N+1 - [Название]
    Задачи:
    - [ ] ...
    - [ ] ...
-   
+
    Переходим к согласованию?
    ```
 
@@ -254,5 +254,5 @@ uv.lock
 
 ---
 
-**Версия:** 1.0  
+**Версия:** 1.0
 **Дата:** 2025-10-10

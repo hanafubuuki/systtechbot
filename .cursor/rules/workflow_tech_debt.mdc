@@ -1,9 +1,9 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
 # Workflow технического долга systtechbot
 
-**Для:** Code Assistant (Cursor AI, GitHub Copilot, и т.д.)  
+**Для:** Code Assistant (Cursor AI, GitHub Copilot, и т.д.)
 **Документы:** [vision.md](../../doc/vision.md) | [conventions.mdc](conventions.mdc) | [tasklist_tech_debt.md](../../doc/tasklist_tech_debt.md)
 
 ---
@@ -39,22 +39,22 @@ alwaysApply: false
 2. Предложи решение с **конкретными примерами кода**:
    ```
    Итерация N: [Название]
-   
+
    Задача 1: [название]
    Файл: path/to/file.py
-   
+
    Было:
    ```python
    # старый код
    ```
-   
+
    Стало:
    ```python
    # новый код
    ```
-   
+
    Обоснование: [почему это улучшение]
-   
+
    Задача 2: ...
    ```
 3. Объясни **что улучшится** (производительность, читаемость, безопасность типов)
@@ -126,13 +126,13 @@ alwaysApply: false
    ✅ Реализовано:
    - Файл1: изменение1
    - Файл2: изменение2
-   
+
    ✅ Проверки качества:
    - make format: OK
    - make lint: 0 errors
    - make typecheck: 0 errors
    - make test: all passed
-   
+
    Готово к ручному тестированию.
    ```
 
@@ -162,7 +162,7 @@ alwaysApply: false
 2. Пример изменения:
    ```markdown
    | 0 | Инструменты качества | ✅ Завершено | 4/4 | make quality работает | 2025-10-11 |
-   
+
    **Прогресс:** 4/18 задач (22%)
    ```
 
@@ -196,19 +196,19 @@ git push origin main
 1. Спроси разрешение:
    ```
    Итерация N завершена ✅
-   
+
    Метрики качества:
    - Форматирование: ✅
    - Линтинг: ✅ 0 errors
    - Типизация: ✅ 0 mypy errors
    - Тесты: ✅ all passed
    - Coverage: XX%
-   
+
    Следующая: Итерация N+1 - [Название]
    Задачи:
    - [ ] ...
    - [ ] ...
-   
+
    Переходим к согласованию?
    ```
 
@@ -458,6 +458,6 @@ make clean       # Удалить __pycache__, логи
 
 ---
 
-**Версия:** 1.0  
-**Дата:** 2025-10-11  
+**Версия:** 1.0
+**Дата:** 2025-10-11
 **Базируется на:** [workflow.mdc](workflow.mdc) v1.0

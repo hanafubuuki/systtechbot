@@ -1,0 +1,167 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Run Bot",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "bot.py"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "🧪 Run All Tests",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "pytest", "tests/", "-v"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "🧪 Run Tests with Coverage",
+      "type": "shell",
+      "command": "uv",
+      "args": [
+        "run",
+        "pytest",
+        "tests/",
+        "-v",
+        "--cov=.",
+        "--cov-report=term-missing",
+        "--cov-report=html"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "🧪 Run Current Test File",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "pytest", "${file}", "-v"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "🎨 Format Code",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "ruff", "format", "."],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "🔍 Lint Code",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "ruff", "check", "."],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "🔎 Check Types (mypy)",
+      "type": "shell",
+      "command": "uv",
+      "args": [
+        "run",
+        "mypy",
+        "bot.py",
+        "handlers/",
+        "services/",
+        "roles/",
+        "config.py",
+        "message_types.py",
+        "constants.py"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "✅ Quality Check (All)",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "ruff", "format", "."],
+      "problemMatcher": [],
+      "dependsOn": ["🎨 Format Code", "🔍 Lint Code", "🔎 Check Types (mypy)", "🧪 Run All Tests"],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "🧹 Clean",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "Get-ChildItem -Path . -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force; if (Test-Path 'bot.log') { Remove-Item 'bot.log' }; if (Test-Path '.coverage') { Remove-Item '.coverage' }; if (Test-Path 'htmlcov') { Remove-Item -Recurse 'htmlcov' }"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "📦 Install Dependencies",
+      "type": "shell",
+      "command": "uv",
+      "args": ["sync"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "📊 Open Coverage Report",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-Command", "Start-Process 'htmlcov/index.html'"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never"
+      }
+    }
+  ]
+}
+
