@@ -11,7 +11,16 @@ import pytest
 from openai import APIConnectionError, APIStatusError, APITimeoutError, RateLimitError
 
 from config import Config
-from services.llm import get_llm_response
+from constants import MessageRole
+from services.llm import _clear_client_cache, get_llm_response
+
+
+@pytest.fixture(autouse=True)
+def clear_llm_cache():
+    """Очистка кэша клиентов OpenAI перед каждым тестом"""
+    _clear_client_cache()
+    yield
+    _clear_client_cache()
 
 
 def test_token_cleanup():
@@ -138,7 +147,9 @@ async def test_llm_rate_limit_error(mock_config):
             )
         )
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "Слишком много запросов" in result
         assert "⚠️" in result
@@ -154,7 +165,9 @@ async def test_llm_timeout_error(mock_config):
             side_effect=APITimeoutError(request=MagicMock())
         )
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "Превышено время ожидания" in result
         assert "⏱️" in result
@@ -170,7 +183,9 @@ async def test_llm_connection_error(mock_config):
             side_effect=APIConnectionError(request=MagicMock())
         )
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "Не удалось подключиться" in result
         assert "❌" in result
@@ -190,7 +205,9 @@ async def test_llm_status_error_404(mock_config):
             side_effect=APIStatusError(message="Not found", response=mock_response, body=None)
         )
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "Модель не найдена" in result
         assert "❌" in result
@@ -212,7 +229,9 @@ async def test_llm_status_error_500(mock_config):
             )
         )
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "Ошибка сервиса LLM: 500" in result
         assert "❌" in result
@@ -228,7 +247,9 @@ async def test_llm_unexpected_error(mock_config):
             side_effect=ValueError("Unexpected error")
         )
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "непредвиденная ошибка" in result
         assert "❌" in result
@@ -246,7 +267,9 @@ async def test_llm_empty_response(mock_config):
 
         mock_instance.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        result = await get_llm_response([{"role": "user", "content": "test"}], mock_config)
+        result = await get_llm_response(
+            [{"role": MessageRole.USER, "content": "test"}], mock_config
+        )
 
         assert "пустой ответ" in result
         assert "🤔" in result

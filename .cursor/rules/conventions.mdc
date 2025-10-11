@@ -149,20 +149,35 @@ def get_llm_response(messages: list) -> str:
 
 ```python
 # ✅ Правильно: используй Enum вместо строк
+# constants.py
 from enum import Enum
 
 class MessageRole(str, Enum):
+    """Роли сообщений в диалоге"""
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
 
-# Использование
+# Использование в коде
+from constants import MessageRole
+
 if message["role"] == MessageRole.SYSTEM:
     ...
+
+# Создание сообщений
+messages = [
+    {"role": MessageRole.SYSTEM, "content": "System prompt"},
+    {"role": MessageRole.USER, "content": "Hello"},
+    {"role": MessageRole.ASSISTANT, "content": "Hi!"}
+]
 
 # ❌ Неправильно: magic strings
 if message["role"] == "system":  # Опечатка не будет найдена
     ...
+
+messages = [
+    {"role": "system", "content": "..."},  # Опечатка не отловится
+]
 
 # ✅ Константы для конфигурации
 MAX_CONTEXT_MESSAGES = 10
@@ -173,6 +188,12 @@ messages = messages[-10:]  # Что это за 10?
 ```
 
 **Правило:** Нет magic strings и magic numbers. Все в константы или Enums.
+
+**Преимущества:**
+- IDE автодополнение
+- Опечатки отловятся на этапе разработки
+- Рефакторинг безопаснее (меняем значение в одном месте)
+- mypy проверит типы
 
 ---
 
@@ -187,6 +208,52 @@ messages = messages[-10:]  # Что это за 10?
 - ❌ Декораторы для бизнес-логики (только для routes)
 - ❌ Глобальные side effects при импорте
 - ❌ Создание тяжелых объектов в каждом вызове (используй кэширование)
+
+### Примеры глобальных side effects
+
+```python
+# ❌ ПЛОХО: загрузка при импорте
+# handlers/messages.py
+config = load_config()  # Выполнится при import!
+
+@router.message()
+async def handle_message(message: Message):
+    response = await get_llm_response(messages, config)  # Глобальный config
+
+# ✅ ХОРОШО: загрузка внутри функции
+@router.message()
+async def handle_message(message: Message):
+    config = load_config()  # Выполнится только при вызове
+    response = await get_llm_response(messages, config)
+```
+
+**Почему плохо:**
+- Нельзя импортировать модуль без выполнения `load_config()`
+- Невозможно протестировать с моками
+- Порядок импорта имеет значение
+- Скрытые зависимости
+
+### Примеры кэширования
+
+```python
+# ✅ ХОРОШО: простой singleton для переиспользования
+_client_cache: dict[tuple[str, str], AsyncOpenAI] = {}
+
+def _get_or_create_client(config: Config) -> AsyncOpenAI:
+    """Получить или создать клиента OpenAI (singleton pattern)."""
+    key = (config.openai_api_key, config.openai_base_url)
+    if key not in _client_cache:
+        _client_cache[key] = AsyncOpenAI(
+            api_key=config.openai_api_key,
+            base_url=config.openai_base_url
+        )
+    return _client_cache[key]
+
+# ❌ ПЛОХО: создание при каждом вызове
+async def get_response(messages: list, config: Config) -> str:
+    client = AsyncOpenAI(...)  # Новый клиент каждый раз!
+    response = await client.chat.completions.create(...)
+```
 
 ---
 

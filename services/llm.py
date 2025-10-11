@@ -9,6 +9,32 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+# Кэш клиентов OpenAI для переиспользования
+_client_cache: dict[tuple[str, str], AsyncOpenAI] = {}
+
+
+def _clear_client_cache() -> None:
+    """Очистить кэш клиентов (для тестов)."""
+    _client_cache.clear()
+
+
+def _get_or_create_client(config: Config) -> AsyncOpenAI:
+    """Получить или создать клиента OpenAI (singleton pattern).
+
+    Args:
+        config: Конфигурация приложения
+
+    Returns:
+        Экземпляр AsyncOpenAI клиента
+    """
+    key = (config.openai_api_key, config.openai_base_url)
+    if key not in _client_cache:
+        _client_cache[key] = AsyncOpenAI(
+            api_key=config.openai_api_key, base_url=config.openai_base_url
+        )
+        logger.debug(f"Created new OpenAI client for {config.openai_base_url}")
+    return _client_cache[key]
+
 
 async def get_llm_response(messages: list, config: Config) -> str:
     """
@@ -22,7 +48,7 @@ async def get_llm_response(messages: list, config: Config) -> str:
         Текст ответа от LLM
     """
     try:
-        client = AsyncOpenAI(api_key=config.openai_api_key, base_url=config.openai_base_url)
+        client = _get_or_create_client(config)
 
         logger.info(f"LLM request: model={config.openai_model}, messages_count={len(messages)}")
 

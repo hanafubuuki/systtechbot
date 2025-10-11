@@ -61,7 +61,10 @@ def test_prompt_content():
     assert "вежлив" in DEFAULT_SYSTEM_PROMPT.lower()
 
     # Проверяем, что промпт запрещает использование markdown
-    assert "без markdown" in DEFAULT_SYSTEM_PROMPT.lower() or "не используй" in DEFAULT_SYSTEM_PROMPT.lower()
+    assert (
+        "без markdown" in DEFAULT_SYSTEM_PROMPT.lower()
+        or "не используй" in DEFAULT_SYSTEM_PROMPT.lower()
+    )
     assert "простым текстом" in DEFAULT_SYSTEM_PROMPT.lower()
 
 

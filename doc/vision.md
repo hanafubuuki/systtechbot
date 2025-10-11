@@ -113,13 +113,14 @@ systtechbot/
 │
 ├── bot.py                  # 🎯 Точка входа
 ├── config.py               # Настройки
+├── constants.py            # Константы (Enums)
 │
 ├── handlers/               # Обработчики Telegram
 │   ├── commands.py         # /start, /help, /clear
 │   └── messages.py         # Обработка сообщений
 │
 ├── services/               # Бизнес-логика
-│   ├── llm.py             # OpenAI API
+│   ├── llm.py             # OpenAI API (с кэшированием клиента)
 │   └── context.py         # Управление контекстом
 │
 ├── roles/                  # Роли бота
@@ -127,7 +128,9 @@ systtechbot/
 │
 ├── tests/                  # Тесты
 │   ├── test_llm.py
-│   └── test_context.py
+│   ├── test_context.py
+│   ├── test_commands.py
+│   └── test_prompts.py
 │
 └── doc/                    # Документация
     ├── adrs/               # ADR-01, ADR-02
@@ -207,16 +210,20 @@ user_contexts = {}
 ### Контекст диалога
 
 ```python
+from constants import MessageRole
+
 {
     "messages": [
-        {"role": "system", "content": "Ты — AI-ассистент..."},
-        {"role": "user", "content": "Привет!"},
-        {"role": "assistant", "content": "Здравствуйте!"}
+        {"role": MessageRole.SYSTEM, "content": "Ты — AI-ассистент..."},
+        {"role": MessageRole.USER, "content": "Привет!"},
+        {"role": MessageRole.ASSISTANT, "content": "Здравствуйте!"}
     ],
     "user_name": "Иван",
     "last_activity": datetime(...)
 }
 ```
+
+**Примечание:** Используется `MessageRole` enum вместо magic strings для безопасности типов.
 
 ### Роль (одна для MVP)
 

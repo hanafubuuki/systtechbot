@@ -3,6 +3,8 @@
 import logging
 from datetime import datetime
 
+from constants import MessageRole
+
 logger = logging.getLogger(__name__)
 
 # Глобальное хранилище контекстов
@@ -81,7 +83,7 @@ def trim_context(messages: list, max_messages: int = 10) -> list:
         return messages
 
     # Сохраняем system prompt + последние max_messages сообщений
-    system_prompt = messages[0] if messages[0]["role"] == "system" else None
+    system_prompt = messages[0] if messages[0]["role"] == MessageRole.SYSTEM else None
     recent_messages = messages[-(max_messages):]
 
     if system_prompt:

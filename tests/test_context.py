@@ -6,6 +6,7 @@ from pathlib import Path
 # Добавляем корневую директорию проекта в путь
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from constants import MessageRole
 from services.context import clear_context, get_context, save_context, trim_context, user_contexts
 
 
@@ -28,9 +29,9 @@ def test_save_and_get_context():
     user_id = 123
     chat_id = 456
     messages = [
-        {"role": "system", "content": "System prompt"},
-        {"role": "user", "content": "Hello"},
-        {"role": "assistant", "content": "Hi there!"},
+        {"role": MessageRole.SYSTEM, "content": "System prompt"},
+        {"role": MessageRole.USER, "content": "Hello"},
+        {"role": MessageRole.ASSISTANT, "content": "Hi there!"},
     ]
     user_name = "Ivan"
 
@@ -51,7 +52,7 @@ def test_save_context_without_name():
 
     user_id = 789
     chat_id = 101
-    messages = [{"role": "user", "content": "Test"}]
+    messages = [{"role": MessageRole.USER, "content": "Test"}]
 
     save_context(user_id, chat_id, messages)
 
@@ -66,7 +67,7 @@ def test_clear_context():
 
     user_id = 111
     chat_id = 222
-    messages = [{"role": "user", "content": "Test message"}]
+    messages = [{"role": MessageRole.USER, "content": "Test message"}]
 
     # Сохраняем контекст
     save_context(user_id, chat_id, messages, "Test User")
@@ -95,15 +96,15 @@ def test_clear_nonexistent_context():
 def test_trim_context_keeps_system_prompt():
     """Тест усечения контекста - system prompt всегда сохраняется"""
     messages = [
-        {"role": "system", "content": "System prompt"},
-        *[{"role": "user", "content": f"Message {i}"} for i in range(20)],
+        {"role": MessageRole.SYSTEM, "content": "System prompt"},
+        *[{"role": MessageRole.USER, "content": f"Message {i}"} for i in range(20)],
     ]
 
     result = trim_context(messages, max_messages=5)
 
     # Должен остаться system prompt + 5 последних сообщений
     assert len(result) == 6
-    assert result[0]["role"] == "system"
+    assert result[0]["role"] == MessageRole.SYSTEM
     assert result[0]["content"] == "System prompt"
     assert result[-1]["content"] == "Message 19"
 
@@ -111,9 +112,9 @@ def test_trim_context_keeps_system_prompt():
 def test_trim_context_no_trimming_needed():
     """Тест усечения когда сообщений меньше лимита"""
     messages = [
-        {"role": "system", "content": "System"},
-        {"role": "user", "content": "Hello"},
-        {"role": "assistant", "content": "Hi"},
+        {"role": MessageRole.SYSTEM, "content": "System"},
+        {"role": MessageRole.USER, "content": "Hello"},
+        {"role": MessageRole.ASSISTANT, "content": "Hi"},
     ]
 
     result = trim_context(messages, max_messages=10)
@@ -135,8 +136,8 @@ def test_trim_context_empty():
 def test_trim_context_exact_limit():
     """Тест усечения при точном соответствии лимиту"""
     messages = [
-        {"role": "system", "content": "System"},
-        *[{"role": "user", "content": f"Msg {i}"} for i in range(10)],
+        {"role": MessageRole.SYSTEM, "content": "System"},
+        *[{"role": MessageRole.USER, "content": f"Msg {i}"} for i in range(10)],
     ]
 
     result = trim_context(messages, max_messages=10)
@@ -151,10 +152,10 @@ def test_multiple_users_separate_contexts():
     user_contexts.clear()
 
     # Пользователь 1
-    save_context(1, 100, [{"role": "user", "content": "User 1"}], "Alice")
+    save_context(1, 100, [{"role": MessageRole.USER, "content": "User 1"}], "Alice")
 
     # Пользователь 2
-    save_context(2, 200, [{"role": "user", "content": "User 2"}], "Bob")
+    save_context(2, 200, [{"role": MessageRole.USER, "content": "User 2"}], "Bob")
 
     # Проверяем что контексты разные
     context1 = get_context(1, 100)
@@ -174,10 +175,10 @@ def test_same_user_different_chats():
     user_id = 100
 
     # Чат 1
-    save_context(user_id, 1, [{"role": "user", "content": "Chat 1"}])
+    save_context(user_id, 1, [{"role": MessageRole.USER, "content": "Chat 1"}])
 
     # Чат 2
-    save_context(user_id, 2, [{"role": "user", "content": "Chat 2"}])
+    save_context(user_id, 2, [{"role": MessageRole.USER, "content": "Chat 2"}])
 
     # Проверяем что контексты разные
     context1 = get_context(user_id, 1)
@@ -195,12 +196,12 @@ def test_context_update():
     chat_id = 600
 
     # Первое сохранение
-    save_context(user_id, chat_id, [{"role": "user", "content": "First"}])
+    save_context(user_id, chat_id, [{"role": MessageRole.USER, "content": "First"}])
 
     # Обновление контекста
     new_messages = [
-        {"role": "user", "content": "First"},
-        {"role": "assistant", "content": "Response"},
+        {"role": MessageRole.USER, "content": "First"},
+        {"role": MessageRole.ASSISTANT, "content": "Response"},
     ]
     save_context(user_id, chat_id, new_messages, "Updated User")
 

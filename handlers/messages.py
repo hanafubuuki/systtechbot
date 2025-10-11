@@ -6,6 +6,7 @@ from aiogram import Router
 from aiogram.types import Message
 
 from config import load_config
+from constants import MessageRole
 from roles.prompts import get_system_prompt
 from services.context import get_context, save_context, trim_context
 from services.llm import get_llm_response
@@ -13,13 +14,12 @@ from services.llm import get_llm_response
 logger = logging.getLogger(__name__)
 router = Router()
 
-# Загружаем конфигурацию один раз
-config = load_config()
-
 
 @router.message()
 async def handle_message(message: Message):
     """Обработчик всех текстовых сообщений (кроме команд)"""
+    config = load_config()  # Загружаем конфигурацию внутри функции
+
     user_id = message.from_user.id
     chat_id = message.chat.id
     user_name = message.from_user.first_name
@@ -35,10 +35,10 @@ async def handle_message(message: Message):
 
     # Если контекста нет, создаем с system prompt
     if not messages:
-        messages = [{"role": "system", "content": get_system_prompt(user_name)}]
+        messages = [{"role": MessageRole.SYSTEM, "content": get_system_prompt(user_name)}]
 
     # Добавляем сообщение пользователя
-    messages.append({"role": "user", "content": user_message})
+    messages.append({"role": MessageRole.USER, "content": user_message})
 
     # Усекаем контекст если нужно
     messages = trim_context(messages, max_messages=config.max_context_messages)
@@ -51,7 +51,7 @@ async def handle_message(message: Message):
         response = await get_llm_response(messages, config)
 
         # Добавляем ответ в контекст
-        messages.append({"role": "assistant", "content": response})
+        messages.append({"role": MessageRole.ASSISTANT, "content": response})
 
         # Сохраняем обновленный контекст
         save_context(user_id, chat_id, messages, user_name)

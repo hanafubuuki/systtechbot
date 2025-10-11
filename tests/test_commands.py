@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
+
 from handlers.commands import cmd_clear, cmd_help, cmd_start
 
 
