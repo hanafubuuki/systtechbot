@@ -32,8 +32,19 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",      # Coverage reporting
+    "ruff>=0.1.0",             # Formatter + linter
+    "mypy>=1.7.0",             # Type checker
 ]
 ```
+
+### Инструменты качества кода
+
+- **ruff** — быстрый форматтер и линтер (замена black + flake8 + isort)
+- **mypy** — статический анализатор типов
+- **pytest-cov** — измерение покрытия кода тестами
+- **Целевой coverage:** >= 80%
 
 ### Хранение данных
 
@@ -60,11 +71,21 @@ dev = [
 
 ### Тестирование
 
-**Уровень: минимальный**
+**Уровень: достаточный**
 
 - Критичные функции (OpenAI API, контекст)
-- Smoke tests (бот запускается и отвечает)
-- Инструмент: `pytest`
+- Интеграционные тесты (handlers)
+- Мокирование внешних вызовов
+- Parametrized тесты для граничных случаев
+- **Инструменты:** `pytest`, `pytest-asyncio`, `pytest-cov`
+- **Целевой coverage:** >= 80%
+
+### Качество кода
+
+- **Форматирование:** автоматическое через `ruff format`
+- **Линтинг:** проверка стиля и ошибок через `ruff check`
+- **Типизация:** строгая проверка через `mypy`
+- **Команда:** `make quality` — полная проверка перед коммитом
 
 ### Критерии успеха MVP
 
@@ -73,6 +94,8 @@ dev = [
 - ✅ Работает в заданной роли
 - ✅ Код понятен и легко меняется
 - ✅ Запуск за 5 минут
+- ✅ Качество кода: `make quality` проходит без ошибок
+- ✅ Покрытие тестами >= 80%
 
 ---
 
@@ -374,13 +397,18 @@ grep "ERROR" bot.log
 ### Makefile
 
 ```makefile
-.PHONY: help install run test clean
+.PHONY: help install run test clean format lint typecheck coverage quality
 
 help:
-	@echo "make install  - Установить зависимости через uv"
-	@echo "make run      - Запустить бота"
-	@echo "make test     - Запустить тесты"
-	@echo "make clean    - Очистить временные файлы"
+	@echo "make install   - Установить зависимости через uv"
+	@echo "make run       - Запустить бота"
+	@echo "make test      - Запустить тесты"
+	@echo "make format    - Форматировать код (ruff)"
+	@echo "make lint      - Проверить линтером (ruff)"
+	@echo "make typecheck - Проверить типы (mypy)"
+	@echo "make coverage  - Тесты с покрытием"
+	@echo "make quality   - Полная проверка качества"
+	@echo "make clean     - Очистить временные файлы"
 
 install:
 	uv venv
@@ -392,6 +420,21 @@ run:
 
 test:
 	uv run pytest tests/ -v
+
+format:
+	uv run ruff format .
+
+lint:
+	uv run ruff check .
+
+typecheck:
+	uv run mypy bot.py handlers/ services/ roles/ config.py
+
+coverage:
+	uv run pytest tests/ -v --cov=. --cov-report=term-missing --cov-report=html
+
+quality: format lint typecheck test
+	@echo "✅ Все проверки качества пройдены!"
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -417,6 +460,9 @@ nano .env
 
 # 4. Запустить
 make run
+
+# 5. Проверка качества (для разработчиков)
+make quality
 ```
 
 ### Получение токенов
@@ -553,8 +599,13 @@ bot = Bot(token=config.telegram_token)
 - [ADR-01](adrs/ADR-01.md) — Выбор OpenAI
 - [ADR-02](adrs/ADR-02.md) — Выбор aiogram
 - [README.md](../README.md) — Инструкция
+- [conventions.mdc](../.cursor/rules/conventions.mdc) — Соглашения о коде
+- [workflow.mdc](../.cursor/rules/workflow.mdc) — Процесс разработки
+- [tasklist.md](tasklist.md) — План разработки MVP
+- [tasklist_tech_debt.md](tasklist_tech_debt.md) — План улучшения качества
 
 ---
 
 **Дата:** 2025-10-10  
-**Версия:** 1.0 (MVP)
+**Версия:** 1.1 (MVP + Quality)  
+**Обновлено:** 2025-10-11 — Добавлены инструменты качества кода

@@ -19,4 +19,3 @@ def get_system_prompt(user_name: str = None) -> str:
     if user_name:
         return DEFAULT_SYSTEM_PROMPT + f"\n\nИмя пользователя: {user_name}"
     return DEFAULT_SYSTEM_PROMPT
-

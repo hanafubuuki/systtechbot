@@ -103,14 +103,32 @@ logger.info(f"User {user_id} sent: {message.text}")  # Нарушение при
 ### Type hints
 
 ```python
-# ✅ Обязательно для публичных функций
-async def get_llm_response(messages: list, user_name: str = None) -> str:
+# ✅ Обязательно для ВСЕХ публичных функций и методов
+async def get_llm_response(messages: list[dict], user_name: str | None = None) -> str:
+    """Получить ответ от LLM"""
     ...
 
-# ✅ Для внутренних функций — опционально
-def _trim_context(messages, max_messages=10):
+# ✅ Используй современный синтаксис (Python 3.11+)
+def process_items(items: list[str]) -> dict[str, int]:  # НЕ List[str], Dict[str, int]
     ...
+
+# ✅ Используй None вместо Optional (PEP 604)
+def get_value(key: str) -> str | None:  # НЕ Optional[str]
+    ...
+
+# ✅ Для внутренних функций — желательно
+def _trim_context(messages: list[dict], max_messages: int = 10) -> list[dict]:
+    ...
+
+# ✅ TypedDict для структур данных
+from typing import TypedDict
+
+class Message(TypedDict):
+    role: str
+    content: str
 ```
+
+**Правило:** Type hints обязательны для публичных функций. Используй современный синтаксис Python 3.11+.
 
 ### Async/await
 
@@ -127,6 +145,37 @@ def get_llm_response(messages: list) -> str:
 
 ---
 
+## Константы и Enums
+
+```python
+# ✅ Правильно: используй Enum вместо строк
+from enum import Enum
+
+class MessageRole(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+# Использование
+if message["role"] == MessageRole.SYSTEM:
+    ...
+
+# ❌ Неправильно: magic strings
+if message["role"] == "system":  # Опечатка не будет найдена
+    ...
+
+# ✅ Константы для конфигурации
+MAX_CONTEXT_MESSAGES = 10
+DEFAULT_TEMPERATURE = 0.7
+
+# ❌ Не используй magic numbers в коде
+messages = messages[-10:]  # Что это за 10?
+```
+
+**Правило:** Нет magic strings и magic numbers. Все в константы или Enums.
+
+---
+
 ## Что НЕ делать
 
 - ❌ Сложные паттерны (Repository, UnitOfWork, Factory, Builder)
@@ -136,6 +185,8 @@ def get_llm_response(messages: list) -> str:
 - ❌ Множественное наследование
 - ❌ Метапрограммирование
 - ❌ Декораторы для бизнес-логики (только для routes)
+- ❌ Глобальные side effects при импорте
+- ❌ Создание тяжелых объектов в каждом вызове (используй кэширование)
 
 ---
 
@@ -185,11 +236,16 @@ user_context = get_user_context(user_id, chat_id)
 
 ## Тестирование
 
-**Уровень: минимальный** (см. [vision.md → Тестирование](../../doc/vision.md#2-принципы-разработки))
+**Уровень: достаточный** (см. [vision.md → Тестирование](../../doc/vision.md#2-принципы-разработки))
+
+**Целевой coverage: >= 80%**
+
+### Что тестируем
 
 ```python
 # ✅ Тестируем критичное
 def test_trim_context_keeps_system_prompt():
+    """Тест усечения контекста - system prompt сохраняется"""
     messages = [
         {"role": "system", "content": "System"},
         *[{"role": "user", "content": f"msg{i}"} for i in range(20)]
@@ -198,9 +254,75 @@ def test_trim_context_keeps_system_prompt():
     assert result[0]["role"] == "system"
     assert len(result) == 6  # system + 5
 
+# ✅ Используй parametrized тесты
+@pytest.mark.parametrize("input_len,max_msg,expected", [
+    (5, 10, 5),
+    (11, 10, 11),
+    (25, 10, 11),
+])
+def test_trim_context_parametrized(input_len, max_msg, expected):
+    messages = [{"role": "system", "content": "S"}] + \
+               [{"role": "user", "content": f"m{i}"} for i in range(input_len-1)]
+    result = trim_context(messages, max_msg)
+    assert len(result) == expected
+
+# ✅ Мокируй внешние вызовы
+@pytest.mark.asyncio
+async def test_llm_response_success():
+    with patch("services.llm.AsyncOpenAI") as mock_client:
+        mock_client.return_value.chat.completions.create.return_value = mock_response
+        result = await get_llm_response([...], config)
+        assert result == "Expected response"
+
 # ❌ НЕ тестируем тривиальное
 def test_get_user_context_returns_dict():  # Очевидно из кода
     ...
+```
+
+### Фикстуры
+
+```python
+# ✅ Используй фикстуры для повторяющихся данных
+@pytest.fixture
+def mock_config():
+    return Config(
+        telegram_token="test",
+        openai_api_key="test"
+    )
+
+@pytest.fixture(autouse=True)
+def clear_contexts():
+    """Очистка глобального состояния перед каждым тестом"""
+    user_contexts.clear()
+    yield
+    user_contexts.clear()
+```
+
+### Организация тестов
+
+```
+tests/
+├── test_config.py       # Тесты конфигурации
+├── test_context.py      # Тесты управления контекстом
+├── test_llm.py          # Тесты LLM сервиса (с моками)
+├── test_handlers.py     # Интеграционные тесты handlers
+└── test_prompts.py      # Тесты промптов
+```
+
+### Запуск тестов
+
+```bash
+# Все тесты
+make test
+
+# С покрытием
+make coverage
+
+# Конкретный файл
+uv run pytest tests/test_context.py -v
+
+# Конкретный тест
+uv run pytest tests/test_context.py::test_name -v
 ```
 
 ---
@@ -213,19 +335,386 @@ def test_get_user_context_returns_dict():  # Очевидно из кода
 
 ---
 
+---
+
+## Форматирование кода
+
+### Инструмент: ruff
+
+```bash
+# Автоматическое форматирование
+make format
+
+# Проверка без изменений
+uv run ruff format --check .
+```
+
+### Правила форматирования
+
+```python
+# ✅ Длина строки: 100 символов
+def some_function(param1: str, param2: int) -> str:
+    return f"Some long string that is within 100 chars limit"
+
+# ✅ Импорты: сгруппированы и отсортированы (isort стиль)
+# stdlib
+import asyncio
+import logging
+from datetime import datetime
+
+# third-party
+from aiogram import Bot, Dispatcher
+from openai import AsyncOpenAI
+
+# local
+from config import load_config
+from services.llm import get_llm_response
+
+# ✅ Пустые строки
+# 2 пустые строки перед классами и функциями верхнего уровня
+# 1 пустая строка между методами класса
+
+# ✅ Кавычки: двойные для строк, одинарные не используем
+message = "Hello"  # НЕ 'Hello'
+```
+
+**Правило:** `make format` перед каждым коммитом. Настройки в `pyproject.toml`.
+
+---
+
+## Линтинг и анализ кода
+
+### Инструмент: ruff (замена flake8, pylint, isort)
+
+```bash
+# Проверка кода
+make lint
+
+# Автоисправление где возможно
+uv run ruff check --fix .
+```
+
+### Проверяемые правила
+
+- **E, W** (pycodestyle) — стиль кода PEP 8
+- **F** (pyflakes) — логические ошибки
+- **I** (isort) — порядок импортов
+- **B** (flake8-bugbear) — распространенные ошибки
+- **C4** (flake8-comprehensions) — оптимизация comprehensions
+- **UP** (pyupgrade) — современный синтаксис Python
+
+### Конфигурация (pyproject.toml)
+
+```toml
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+ignore = ["E501"]  # line too long (обрабатывает formatter)
+```
+
+**Правило:** 0 ошибок линтера перед коммитом.
+
+---
+
+## Проверка типов
+
+### Инструмент: mypy
+
+```bash
+# Проверка типов
+make typecheck
+```
+
+### Конфигурация (pyproject.toml)
+
+```toml
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true  # Требуем type hints
+exclude = ["tests/"]  # Тесты могут быть менее строгими
+```
+
+### Типичные ошибки и решения
+
+```python
+# ❌ Ошибка: Missing return type
+def get_context(user_id, chat_id):
+    ...
+
+# ✅ Решение: добавить аннотацию
+def get_context(user_id: int, chat_id: int) -> dict:
+    ...
+
+# ❌ Ошибка: Need type annotation
+user_contexts = {}
+
+# ✅ Решение: указать тип
+user_contexts: dict[tuple[int, int], dict] = {}
+
+# ❌ Ошибка: Incompatible return value type
+def get_name() -> str:
+    return None  # mypy error
+
+# ✅ Решение: использовать Optional
+def get_name() -> str | None:
+    return None
+```
+
+**Правило:** 0 ошибок mypy перед коммитом.
+
+---
+
+## Документирование кода
+
+### Docstrings: Google Style
+
+```python
+def trim_context(messages: list[dict], max_messages: int = 10) -> list[dict]:
+    """Усечь контекст до максимального количества сообщений.
+    
+    Всегда сохраняет system prompt (первое сообщение, если его role == "system").
+    Если сообщений меньше или равно лимиту, возвращает как есть.
+    
+    Args:
+        messages: Список сообщений в формате OpenAI API
+        max_messages: Максимальное количество сообщений (не считая system prompt)
+        
+    Returns:
+        Усеченный список сообщений с сохранением system prompt
+        
+    Example:
+        >>> messages = [
+        ...     {"role": "system", "content": "You are AI"},
+        ...     {"role": "user", "content": "Hi"},
+        ...     # ... еще 20 сообщений
+        ... ]
+        >>> result = trim_context(messages, max_messages=5)
+        >>> len(result)  # system + 5 последних
+        6
+    """
+    if len(messages) <= max_messages + 1:
+        return messages
+    
+    system_prompt = messages[0] if messages[0]["role"] == "system" else None
+    recent_messages = messages[-(max_messages):]
+    
+    if system_prompt:
+        return [system_prompt] + recent_messages
+    return recent_messages
+```
+
+### Где обязательны docstrings
+
+- ✅ Все публичные функции и методы
+- ✅ Все классы
+- ✅ Модули (в начале файла)
+- ❌ Приватные функции (опционально)
+- ❌ Тесты (опционально, но название теста должно быть говорящим)
+
+**Правило:** Google Style для всех docstrings.
+
+---
+
+## Лучшие практики Python
+
+### 1. Используй современный синтаксис (Python 3.11+)
+
+```python
+# ✅ Хорошо: union types через |
+def get_value(key: str) -> str | None:
+    ...
+
+# ❌ Плохо: старый синтаксис
+from typing import Optional
+def get_value(key: str) -> Optional[str]:
+    ...
+
+# ✅ Хорошо: встроенные generic types
+def process(items: list[str]) -> dict[str, int]:
+    ...
+
+# ❌ Плохо: из typing
+from typing import List, Dict
+def process(items: List[str]) -> Dict[str, int]:
+    ...
+```
+
+### 2. Используй dataclasses
+
+```python
+# ✅ Хорошо: dataclass для структур данных
+from dataclasses import dataclass
+
+@dataclass
+class Config:
+    telegram_token: str
+    openai_api_key: str
+    temperature: float = 0.7
+
+# ❌ Плохо: обычный класс с __init__
+class Config:
+    def __init__(self, telegram_token: str, openai_api_key: str, temperature: float = 0.7):
+        self.telegram_token = telegram_token
+        self.openai_api_key = openai_api_key
+        self.temperature = temperature
+```
+
+### 3. Используй context managers
+
+```python
+# ✅ Хорошо: with для ресурсов
+with open("file.txt") as f:
+    data = f.read()
+
+# ❌ Плохо: без with
+f = open("file.txt")
+data = f.read()
+f.close()  # Может не выполниться при ошибке
+```
+
+### 4. Используй comprehensions (но не усложняй)
+
+```python
+# ✅ Хорошо: простой list comprehension
+user_ids = [msg["user_id"] for msg in messages]
+
+# ✅ Хорошо: с условием
+active_users = [u for u in users if u.is_active]
+
+# ❌ Плохо: слишком сложный
+result = {k: [x for x in v if x > 0] for k, v in data.items() if len(v) > 3}
+# Лучше разбить на несколько строк
+```
+
+### 5. Избегай изменяемых default arguments
+
+```python
+# ❌ ПЛОХО: изменяемый default
+def add_message(message: dict, messages: list = []):
+    messages.append(message)  # BUG: список общий для всех вызовов!
+    return messages
+
+# ✅ ХОРОШО: None + создание внутри
+def add_message(message: dict, messages: list | None = None) -> list:
+    if messages is None:
+        messages = []
+    messages.append(message)
+    return messages
+```
+
+### 6. Правильная работа с async
+
+```python
+# ✅ Хорошо: все I/O операции async
+async def fetch_data():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.json()
+
+# ❌ Плохо: блокирующий вызов в async функции
+async def fetch_data():
+    return requests.get(url).json()  # Блокирует event loop!
+```
+
+### 7. Логирование с ленивым форматированием
+
+```python
+# ✅ Хорошо: ленивое форматирование
+logger.info("User %s sent message", user_id)
+
+# ✅ Хорошо: f-string для сложного форматирования
+logger.info(f"User {user_id} sent message: length={len(text)}, chat_id={chat_id}")
+
+# ❌ Плохо: конкатенация
+logger.info("User " + str(user_id) + " sent message")
+```
+
+### 8. Используй Path для путей
+
+```python
+# ✅ Хорошо: pathlib
+from pathlib import Path
+
+config_file = Path(__file__).parent / "config.json"
+if config_file.exists():
+    data = config_file.read_text()
+
+# ❌ Плохо: os.path (старый стиль)
+import os
+config_file = os.path.join(os.path.dirname(__file__), "config.json")
+if os.path.exists(config_file):
+    with open(config_file) as f:
+        data = f.read()
+```
+
+---
+
+## Полная проверка качества
+
+### Команда make quality
+
+Запускает все проверки последовательно:
+
+```bash
+make quality
+```
+
+Выполняет:
+1. `make format` — форматирование кода
+2. `make lint` — проверка линтером
+3. `make typecheck` — проверка типов
+4. `make test` — запуск тестов
+
+**Правило:** `make quality` должен проходить без ошибок перед каждым коммитом.
+
+---
+
 ## Checklist перед коммитом
 
+### Автоматические проверки
+- [ ] `make format` — код отформатирован
+- [ ] `make lint` — 0 ошибок ruff
+- [ ] `make typecheck` — 0 ошибок mypy
+- [ ] `make test` — все тесты зеленые
+- [ ] `make quality` — полная проверка пройдена
+
+### Код
 - [ ] Код следует KISS принципу
 - [ ] Нет дублирования из vision.md
 - [ ] Обработка ошибок везде
 - [ ] Логирование структурировано
-- [ ] Type hints для публичных функций
+- [ ] Type hints для ВСЕХ публичных функций
+- [ ] Docstrings (Google style) где нужно
+- [ ] Нет magic strings и magic numbers
+- [ ] Нет глобальных side effects
 - [ ] Нет "умного" кода
 - [ ] Файл < 200 строк
-- [ ] Работает локально
+
+### Архитектура
+- [ ] Handlers не содержат бизнес-логику
+- [ ] Services содержат всю бизнес-логику
+- [ ] Нет сложных паттернов
+- [ ] Следует принципам из vision.md
+
+### Тестирование
+- [ ] Критичный код покрыт тестами
+- [ ] Coverage >= 80%
+- [ ] Используются моки для внешних вызовов
+- [ ] Тесты изолированы (используют фикстуры)
+
+### Финал
+- [ ] Бот работает локально (`make run`)
+- [ ] Ручное тестирование пройдено
+- [ ] Получено подтверждение от пользователя (если workflow требует)
 
 ---
 
-**Версия:** 1.0  
-**Дата:** 2025-10-10  
-**Базируется на:** [vision.md](../../doc/vision.md) v1.0
+**Версия:** 2.0  
+**Дата:** 2025-10-11 (обновлено)  
+**Базируется на:** [vision.md](../../doc/vision.md) v1.0  
+**Изменения:** Добавлены разделы о качестве кода, форматировании, линтинге, типизации, документировании, лучших практиках Python

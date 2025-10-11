@@ -1,7 +1,7 @@
 """Управление контекстом диалогов"""
+
 import logging
 from datetime import datetime
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +14,11 @@ user_contexts = {}
 def get_context(user_id: int, chat_id: int) -> dict:
     """
     Получить контекст пользователя
-    
+
     Args:
         user_id: ID пользователя
         chat_id: ID чата
-        
+
     Returns:
         Словарь с контекстом или пустой словарь
     """
@@ -29,7 +29,7 @@ def get_context(user_id: int, chat_id: int) -> dict:
 def save_context(user_id: int, chat_id: int, messages: list, user_name: str = None):
     """
     Сохранить контекст пользователя
-    
+
     Args:
         user_id: ID пользователя
         chat_id: ID чата
@@ -40,15 +40,17 @@ def save_context(user_id: int, chat_id: int, messages: list, user_name: str = No
     user_contexts[key] = {
         "messages": messages,
         "user_name": user_name,
-        "last_activity": datetime.now()
+        "last_activity": datetime.now(),
     }
-    logger.info(f"Context saved for user {user_id} in chat {chat_id}, messages count: {len(messages)}")
+    logger.info(
+        f"Context saved for user {user_id} in chat {chat_id}, messages count: {len(messages)}"
+    )
 
 
 def clear_context(user_id: int, chat_id: int):
     """
     Очистить контекст пользователя
-    
+
     Args:
         user_id: ID пользователя
         chat_id: ID чата
@@ -63,27 +65,26 @@ def trim_context(messages: list, max_messages: int = 10) -> list:
     """
     Усечь контекст до максимального количества сообщений
     Всегда сохраняет system prompt (первое сообщение)
-    
+
     Args:
         messages: Список сообщений
         max_messages: Максимальное количество сообщений (не считая system)
-        
+
     Returns:
         Усеченный список сообщений
     """
     if not messages:
         return messages
-    
+
     # Если сообщений меньше или равно лимиту (+1 для system prompt)
     if len(messages) <= max_messages + 1:
         return messages
-    
+
     # Сохраняем system prompt + последние max_messages сообщений
     system_prompt = messages[0] if messages[0]["role"] == "system" else None
     recent_messages = messages[-(max_messages):]
-    
+
     if system_prompt:
         return [system_prompt] + recent_messages
-    
-    return recent_messages
 
+    return recent_messages

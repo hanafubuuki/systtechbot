@@ -11,6 +11,10 @@ bot.log
 test-output.xml
 .pytest_cache/
 
+# Coverage
+.coverage
+htmlcov/
+
 # Python
 __pycache__/
 *.pyc

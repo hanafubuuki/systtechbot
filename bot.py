@@ -1,6 +1,8 @@
 """Точка входа приложения"""
+
 import asyncio
 import logging
+
 from aiogram import Bot, Dispatcher
 
 from config import load_config
@@ -9,11 +11,8 @@ from handlers import commands, messages
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("bot.log", encoding="utf-8"), logging.StreamHandler()],
 )
 
 logger = logging.getLogger(__name__)
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def main():
     """Главная функция запуска бота"""
     logger.info("🚀 Bot starting...")
-    
+
     # Загрузка конфигурации
     try:
         config = load_config()
@@ -30,15 +29,15 @@ async def main():
         logger.error(f"Configuration error: {e}")
         logger.error("Убедитесь, что файл .env содержит TELEGRAM_TOKEN и OPENAI_API_KEY")
         return
-    
+
     # Инициализация бота и диспетчера
     bot = Bot(token=config.telegram_token)
     dp = Dispatcher()
-    
+
     # Регистрация роутеров
     dp.include_router(commands.router)
     dp.include_router(messages.router)
-    
+
     # Запуск бота
     try:
         logger.info("✅ Bot started successfully")
@@ -52,4 +51,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
