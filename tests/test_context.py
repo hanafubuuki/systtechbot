@@ -3,6 +3,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 # Добавляем корневую директорию проекта в путь
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -145,6 +147,32 @@ def test_trim_context_exact_limit():
     # Должно быть 11 сообщений (system + 10)
     assert len(result) == 11
     assert result == messages
+
+
+@pytest.mark.parametrize(
+    "messages_count,max_messages,expected_count,description",
+    [
+        (5, 10, 5, "меньше лимита"),
+        (11, 10, 11, "равно лимиту + system"),
+        (25, 10, 11, "больше лимита"),
+        (3, 20, 3, "лимит больше количества"),
+        (15, 5, 6, "усечение до 5 + system"),
+    ],
+)
+def test_trim_context_parametrized(messages_count, max_messages, expected_count, description):
+    """Параметризованный тест усечения контекста"""
+    # Создаем messages_count сообщений (включая system)
+    messages = [{"role": MessageRole.SYSTEM, "content": "System"}]
+    messages += [
+        {"role": MessageRole.USER, "content": f"Message {i}"} for i in range(messages_count - 1)
+    ]
+
+    result = trim_context(messages, max_messages)
+
+    assert len(result) == expected_count, f"Fail for case: {description}"
+    # System prompt всегда первый
+    if result:
+        assert result[0]["role"] == MessageRole.SYSTEM
 
 
 def test_multiple_users_separate_contexts():
