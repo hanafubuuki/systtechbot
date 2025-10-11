@@ -69,7 +69,7 @@ def test_config_defaults():
 
         # Проверяем дефолтные значения
         assert config.openai_base_url == "https://api.openai.com/v1"
-        assert config.openai_model == "gpt-4o-mini"
+        assert config.openai_model == "openai/gpt-oss-20b:free"
         assert config.max_context_messages == 10
         assert config.temperature == 0.7
 

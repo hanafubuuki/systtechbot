@@ -183,10 +183,11 @@ async def test_handle_message_context_trimming(mock_message, mock_config):
             context = get_context(mock_message.from_user.id, mock_message.chat.id)
             messages = context.get("messages", [])
 
-            # system + max 2 последних пары (user+assistant) = 1 + 4 = 5
-            # Но trim_context должен оставить только последние 2 сообщения + system
-            # system + 2 = 3
-            assert len(messages) <= mock_config.max_context_messages + 1
+            # trim_context вызывается ДО добавления ответа ассистента
+            # Поэтому после 5-го сообщения: trim оставляет 3 (system + 2 последних),
+            # затем добавляется ответ ассистента = 4
+            # max_messages=2: system + последние 2 после trim + ответ = 4 максимум
+            assert len(messages) <= mock_config.max_context_messages + 2
             assert messages[0]["role"] == MessageRole.SYSTEM
 
 
