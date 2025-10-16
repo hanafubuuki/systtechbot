@@ -1,69 +1,93 @@
-"""Управление контекстом диалогов"""
+"""Управление контекстом диалогов через PostgreSQL"""
 
 import logging
-from datetime import datetime
 
 from constants import MessageRole
 from message_types import Message
+from services.database import (
+    get_messages,
+    get_or_create_chat,
+    get_or_create_user,
+    save_message,
+    soft_delete_messages,
+)
 
 logger = logging.getLogger(__name__)
 
-# Глобальное хранилище контекстов
-# Ключ: (user_id, chat_id)
-# Значение: {"messages": [...], "user_name": str, "last_activity": datetime}
-user_contexts: dict[tuple[int, int], dict] = {}
 
-
-def get_context(user_id: int, chat_id: int) -> dict:
+async def get_context(user_id: int, chat_id: int) -> dict:
     """
-    Получить контекст пользователя
+    Получить контекст пользователя из БД
 
     Args:
-        user_id: ID пользователя
-        chat_id: ID чата
+        user_id: ID пользователя в Telegram
+        chat_id: ID чата в Telegram
 
     Returns:
-        Словарь с контекстом или пустой словарь
+        Словарь с контекстом {"messages": [...]}
     """
-    key = (user_id, chat_id)
-    return user_contexts.get(key, {"messages": []})
+    # Получить внутренние ID
+    db_user_id = await get_or_create_user(user_id, "Unknown")
+    db_chat_id = await get_or_create_chat(chat_id)
+
+    # Получить сообщения из БД
+    db_messages = await get_messages(db_user_id, db_chat_id, limit=100)
+
+    # Преобразовать в формат OpenAI
+    messages: list[Message] = []
+    for msg in db_messages:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+
+    logger.info(f"Context loaded for user {user_id} in chat {chat_id}: {len(messages)} messages")
+    return {"messages": messages}
 
 
-def save_context(
+async def save_context(
     user_id: int, chat_id: int, messages: list[Message], user_name: str | None = None
 ) -> None:
     """
-    Сохранить контекст пользователя
+    Сохранить контекст пользователя в БД
 
     Args:
-        user_id: ID пользователя
-        chat_id: ID чата
+        user_id: ID пользователя в Telegram
+        chat_id: ID чата в Telegram
         messages: Список сообщений в формате OpenAI
         user_name: Имя пользователя (опционально)
     """
-    key = (user_id, chat_id)
-    user_contexts[key] = {
-        "messages": messages,
-        "user_name": user_name,
-        "last_activity": datetime.now(),
-    }
+    # Получить или создать пользователя и чат
+    db_user_id = await get_or_create_user(user_id, user_name or "Unknown")
+    db_chat_id = await get_or_create_chat(chat_id)
+
+    # Получить существующие сообщения
+    existing_messages = await get_messages(db_user_id, db_chat_id, limit=100)
+    existing_count = len(existing_messages)
+
+    # Сохранить только новые сообщения (те, что после existing_count)
+    new_messages = messages[existing_count:]
+    for msg in new_messages:
+        await save_message(db_user_id, db_chat_id, msg["role"], msg["content"])
+
     logger.info(
-        f"Context saved for user {user_id} in chat {chat_id}, messages count: {len(messages)}"
+        f"Context saved for user {user_id} in chat {chat_id}: "
+        f"{len(new_messages)} new messages, {len(messages)} total"
     )
 
 
-def clear_context(user_id: int, chat_id: int) -> None:
+async def clear_context(user_id: int, chat_id: int) -> None:
     """
-    Очистить контекст пользователя
+    Очистить контекст пользователя (soft delete)
 
     Args:
-        user_id: ID пользователя
-        chat_id: ID чата
+        user_id: ID пользователя в Telegram
+        chat_id: ID чата в Telegram
     """
-    key = (user_id, chat_id)
-    if key in user_contexts:
-        del user_contexts[key]
-        logger.info(f"Context cleared for user {user_id} in chat {chat_id}")
+    # Получить внутренние ID
+    db_user_id = await get_or_create_user(user_id, "Unknown")
+    db_chat_id = await get_or_create_chat(chat_id)
+
+    # Soft delete сообщений
+    await soft_delete_messages(db_user_id, db_chat_id)
+    logger.info(f"Context cleared for user {user_id} in chat {chat_id}")
 
 
 def trim_context(messages: list[Message], max_messages: int = 10) -> list[Message]:

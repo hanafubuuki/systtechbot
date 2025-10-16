@@ -65,7 +65,7 @@ async def cmd_clear(message: Message) -> None:
     user_id = message.from_user.id
     chat_id = message.chat.id
 
-    clear_context(user_id, chat_id)
+    await clear_context(user_id, chat_id)
     logger.info(f"User {user_id} cleared context in chat {chat_id}")
 
     await message.answer("🗑️ История диалога очищена!")

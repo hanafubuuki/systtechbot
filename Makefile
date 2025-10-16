@@ -1,16 +1,22 @@
-.PHONY: help install run test clean format lint typecheck coverage quality
+.PHONY: help install run test clean format lint typecheck coverage quality db-up db-down db-migrate db-reset
 
 help:
 	@echo "Доступные команды:"
-	@echo "  make install   - Установить зависимости через uv"
-	@echo "  make run       - Запустить бота"
-	@echo "  make test      - Запустить тесты"
-	@echo "  make format    - Форматировать код (ruff)"
-	@echo "  make lint      - Проверить линтером (ruff)"
-	@echo "  make typecheck - Проверить типы (mypy)"
-	@echo "  make coverage  - Тесты с покрытием"
-	@echo "  make quality   - Полная проверка качества"
-	@echo "  make clean     - Очистить временные файлы"
+	@echo "  make install    - Установить зависимости через uv"
+	@echo "  make run        - Запустить бота"
+	@echo "  make test       - Запустить тесты"
+	@echo "  make format     - Форматировать код (ruff)"
+	@echo "  make lint       - Проверить линтером (ruff)"
+	@echo "  make typecheck  - Проверить типы (mypy)"
+	@echo "  make coverage   - Тесты с покрытием"
+	@echo "  make quality    - Полная проверка качества"
+	@echo "  make clean      - Очистить временные файлы"
+	@echo ""
+	@echo "Команды для работы с БД:"
+	@echo "  make db-up      - Запустить PostgreSQL через Docker"
+	@echo "  make db-down    - Остановить PostgreSQL"
+	@echo "  make db-migrate - Применить миграции"
+	@echo "  make db-reset   - Сбросить БД и применить миграции заново"
 
 install:
 	@echo "📦 Создание виртуального окружения..."
@@ -57,5 +63,35 @@ clean:
 	@if exist .coverage del /f /q .coverage
 	@if exist htmlcov rd /s /q htmlcov
 	@echo "✅ Очистка завершена"
+
+# Database commands
+db-up:
+	@echo "🐘 Запуск PostgreSQL..."
+	docker-compose up -d
+	@echo "⏳ Ожидание готовности БД..."
+	timeout /t 5
+	@echo "✅ PostgreSQL запущен"
+
+db-down:
+	@echo "🛑 Остановка PostgreSQL..."
+	docker-compose down
+	@echo "✅ PostgreSQL остановлен"
+
+db-migrate:
+	@echo "🔄 Применение миграций..."
+	uv run alembic upgrade head
+	@echo "✅ Миграции применены"
+
+db-reset:
+	@echo "⚠️  Сброс БД и применение миграций заново..."
+	@echo "🛑 Остановка контейнера..."
+	docker-compose down -v
+	@echo "🐘 Запуск PostgreSQL..."
+	docker-compose up -d
+	@echo "⏳ Ожидание готовности БД..."
+	timeout /t 5
+	@echo "🔄 Применение миграций..."
+	uv run alembic upgrade head
+	@echo "✅ БД сброшена и миграции применены"
 
 

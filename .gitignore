@@ -25,6 +25,11 @@ __pycache__/
 # uv lock файл (можно раскомментировать, если не хотите коммитить)
 # uv.lock
 
+# Database & Migrations
+postgres-data/
+alembic/versions/*.pyc
+alembic/__pycache__/
+
 # IDE
 # Коммитим настройки проекта, но игнорируем личные
 .vscode/*.code-workspace

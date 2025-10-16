@@ -31,12 +31,14 @@ def test_load_config_success():
     env_vars = {
         "TELEGRAM_TOKEN": "test-telegram-token",
         "OPENAI_API_KEY": "test-openai-key",
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test",
     }
     with patch.dict("os.environ", env_vars, clear=True):
         config = load_config()
 
         assert config.telegram_token == "test-telegram-token"
         assert config.openai_api_key == "test-openai-key"
+        assert config.database_url == "postgresql://test:test@localhost:5432/test"
 
 
 def test_load_config_with_optional_params():
@@ -44,6 +46,7 @@ def test_load_config_with_optional_params():
     env_vars = {
         "TELEGRAM_TOKEN": "test-telegram-token",
         "OPENAI_API_KEY": "test-openai-key",
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test",
         "OPENAI_BASE_URL": "https://custom-api.example.com",
         "OPENAI_MODEL": "gpt-4",
         "MAX_CONTEXT_MESSAGES": "20",
@@ -63,6 +66,7 @@ def test_config_defaults():
     env_vars = {
         "TELEGRAM_TOKEN": "test-telegram-token",
         "OPENAI_API_KEY": "test-openai-key",
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test",
     }
     with patch.dict("os.environ", env_vars, clear=True):
         config = load_config()
@@ -79,6 +83,7 @@ def test_config_dataclass():
     config = Config(
         telegram_token="token123",
         openai_api_key="key456",
+        database_url="postgresql://test:test@localhost:5432/test",
         openai_base_url="https://test.com",
         openai_model="gpt-3.5-turbo",
         max_context_messages=15,
@@ -106,6 +111,7 @@ def test_max_context_messages_conversion(max_context, expected):
     env_vars = {
         "TELEGRAM_TOKEN": "test-token",
         "OPENAI_API_KEY": "test-key",
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test",
         "MAX_CONTEXT_MESSAGES": max_context,
     }
     with patch.dict("os.environ", env_vars, clear=True):
@@ -127,6 +133,7 @@ def test_temperature_conversion(temperature, expected):
     env_vars = {
         "TELEGRAM_TOKEN": "test-token",
         "OPENAI_API_KEY": "test-key",
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test",
         "TEMPERATURE": temperature,
     }
     with patch.dict("os.environ", env_vars, clear=True):

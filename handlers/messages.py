@@ -33,7 +33,7 @@ async def handle_message(message: Message) -> None:
     )
 
     # Получаем существующий контекст
-    context = get_context(user_id, chat_id)
+    context = await get_context(user_id, chat_id)
     messages = context.get("messages", [])
 
     # Если контекста нет, создаем с system prompt
@@ -57,7 +57,7 @@ async def handle_message(message: Message) -> None:
         messages.append({"role": MessageRole.ASSISTANT, "content": response})
 
         # Сохраняем обновленный контекст
-        save_context(user_id, chat_id, messages, user_name)
+        await save_context(user_id, chat_id, messages, user_name)
 
         await message.answer(response)
 
