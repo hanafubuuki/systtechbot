@@ -48,8 +48,11 @@ dev = [
 
 ### Хранение данных
 
-- **In-Memory** — контекст диалогов в словаре Python
-- Без базы данных
+- **PostgreSQL** — персистентное хранение истории диалогов
+- **Alembic** — управление миграциями схемы БД
+- **psycopg3** — асинхронный драйвер для PostgreSQL
+- **Soft delete** — данные не удаляются физически
+- **Docker Compose** — локальное развертывание БД
 
 ### Инфраструктура
 
@@ -122,15 +125,25 @@ systtechbot/
 │
 ├── services/               # Бизнес-логика
 │   ├── llm.py             # OpenAI API (с кэшированием клиента)
-│   └── context.py         # Управление контекстом
+│   ├── context.py         # Управление контекстом
+│   └── database.py        # Слой доступа к данным (DAL)
 │
 ├── roles/                  # Роли бота
 │   └── prompts.py         # System prompts
 │
+├── alembic/                # Миграции БД
+│   ├── versions/          # Файлы миграций
+│   └── env.py             # Конфигурация Alembic
+│
+├── docker-compose.yml      # PostgreSQL для локальной разработки
+├── alembic.ini             # Конфигурация Alembic
+│
 ├── tests/                  # Тесты
 │   ├── test_llm.py
 │   ├── test_context.py
+│   ├── test_database.py
 │   ├── test_commands.py
+│   ├── test_handlers.py
 │   └── test_prompts.py
 │
 └── doc/                    # Документация
@@ -153,11 +166,13 @@ systtechbot/
 ```
 Telegram User
      ↓
-Presentation Layer (handlers/)    ← Прием/отправка сообщений
+Presentation Layer (handlers/)          ← Прием/отправка сообщений
      ↓
-Business Logic Layer (services/)  ← LLM, контекст, роли
+Business Logic Layer (services/)        ← LLM, контекст, DAL
      ↓
-External Services (OpenAI API)
+Data Access Layer (services/database.py) ← Raw SQL
+     ↓
+External Services                       ← OpenAI API, PostgreSQL
 ```
 
 ### Поток данных
@@ -165,26 +180,31 @@ External Services (OpenAI API)
 ```
 1. User → "Привет!"
 2. handlers/messages.py → получает сообщение
-3. services/context.py → добавляет в контекст
-4. services/llm.py → вызывает OpenAI API
-5. services/context.py → сохраняет ответ
-6. handlers/messages.py → отправляет ответ
+3. services/context.py → получает историю из БД
+4. services/database.py → SELECT * FROM messages...
+5. services/context.py → добавляет новое сообщение
+6. services/llm.py → вызывает OpenAI API
+7. services/context.py → сохраняет ответ в БД
+8. services/database.py → INSERT INTO messages...
+9. handlers/messages.py → отправляет ответ
 ```
 
 ### Хранение состояния
 
-**Простой Python словарь:**
+**PostgreSQL с soft delete:**
 
 ```python
-# Глобальная структура в services/context.py
-user_contexts = {}
+# services/database.py - DAL с raw SQL
+async def get_messages(user_id: int, chat_id: int, limit: int = 10):
+    """Получает историю сообщений из БД"""
+    # SELECT * FROM messages
+    # WHERE user_id = ? AND chat_id = ?
+    # AND deleted_at IS NULL  -- Soft delete
+    # ORDER BY created_at DESC LIMIT ?
 
-# Ключ: (user_id, chat_id)
-# Значение: {
-#     "messages": [...],
-#     "user_name": "Иван",
-#     "last_activity": datetime
-# }
+# Таблицы: users, chats, messages
+# Soft delete: deleted_at IS NULL
+# Метаданные: created_at, length
 ```
 
 ### Обработка ошибок

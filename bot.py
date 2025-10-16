@@ -2,11 +2,13 @@
 
 import asyncio
 import logging
+import sys
 
 from aiogram import Bot, Dispatcher
 
 from config import load_config
 from handlers import commands, messages
+from services.database import close_db, init_db
 
 # Настройка логирования
 logging.basicConfig(
@@ -38,6 +40,14 @@ async def main() -> None:
     dp.include_router(commands.router)
     dp.include_router(messages.router)
 
+    # Инициализация базы данных
+    try:
+        await init_db()
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        logger.error("Убедитесь, что PostgreSQL запущен и DATABASE_URL правильный")
+        return
+
     # Запуск бота
     try:
         logger.info("✅ Bot started successfully")
@@ -46,8 +56,13 @@ async def main() -> None:
         logger.error(f"Bot error: {e}")
     finally:
         await bot.session.close()
+        await close_db()
         logger.info("Bot stopped")
 
 
 if __name__ == "__main__":
+    # Fix for Windows: psycopg3 requires WindowsSelectorEventLoopPolicy
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     asyncio.run(main())

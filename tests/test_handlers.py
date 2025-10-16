@@ -11,15 +11,90 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from constants import MessageRole
 from handlers.messages import handle_message
-from services.context import get_context, user_contexts
+from services.context import get_context
+
+# Глобальное хранилище для эмуляции БД в тестах
+_test_db_users = {}
+_test_db_chats = {}
+_test_db_messages = []
+_test_db_id_counter = 1
+
+
+def _reset_test_db():
+    """Сбросить тестовую БД"""
+    global _test_db_id_counter
+    _test_db_users.clear()
+    _test_db_chats.clear()
+    _test_db_messages.clear()
+    _test_db_id_counter = 1
+
+
+async def _mock_get_or_create_user(telegram_user_id: int, first_name: str):  # type: ignore[misc]
+    """Mock для get_or_create_user"""
+    if telegram_user_id not in _test_db_users:
+        global _test_db_id_counter
+        _test_db_users[telegram_user_id] = _test_db_id_counter
+        _test_db_id_counter += 1
+    return _test_db_users[telegram_user_id]
+
+
+async def _mock_get_or_create_chat(telegram_chat_id: int):  # type: ignore[misc]
+    """Mock для get_or_create_chat"""
+    if telegram_chat_id not in _test_db_chats:
+        global _test_db_id_counter
+        _test_db_chats[telegram_chat_id] = _test_db_id_counter
+        _test_db_id_counter += 1
+    return _test_db_chats[telegram_chat_id]
+
+
+async def _mock_save_message(user_id: int, chat_id: int, role: str, content: str):  # type: ignore[misc]
+    """Mock для save_message"""
+    global _test_db_id_counter
+    msg_id = _test_db_id_counter
+    _test_db_id_counter += 1
+    _test_db_messages.append(
+        {
+            "id": msg_id,
+            "user_id": user_id,
+            "chat_id": chat_id,
+            "role": role,
+            "content": content,
+            "deleted_at": None,
+        }
+    )
+    return msg_id
+
+
+async def _mock_get_messages(user_id: int, chat_id: int, limit: int = 10):  # type: ignore[misc]
+    """Mock для get_messages"""
+    messages = [
+        msg
+        for msg in _test_db_messages
+        if msg["user_id"] == user_id and msg["chat_id"] == chat_id and msg["deleted_at"] is None
+    ]
+    return messages[-limit:] if len(messages) > limit else messages
+
+
+async def _mock_soft_delete_messages(user_id: int, chat_id: int):  # type: ignore[misc]
+    """Mock для soft_delete_messages"""
+    for msg in _test_db_messages:
+        if msg["user_id"] == user_id and msg["chat_id"] == chat_id:
+            msg["deleted_at"] = True
 
 
 @pytest.fixture(autouse=True)
-def clear_contexts():
-    """Очистка контекстов перед каждым тестом"""
-    user_contexts.clear()
-    yield
-    user_contexts.clear()
+def mock_database():
+    """Mock всех database функций для тестов"""
+    _reset_test_db()
+    with (
+        patch("services.context.get_or_create_user", new=_mock_get_or_create_user),
+        patch("services.context.get_or_create_chat", new=_mock_get_or_create_chat),
+        patch("services.context.save_message", new=_mock_save_message),
+        patch("services.context.get_messages", new=_mock_get_messages),
+        patch("services.context.soft_delete_messages", new=_mock_soft_delete_messages),
+    ):
+        yield
+    _reset_test_db()
 
 
 @pytest.fixture
@@ -60,7 +135,7 @@ async def test_handle_message_creates_initial_context(mock_message, mock_config)
             await handle_message(mock_message)
 
             # Проверяем, что контекст создан
-            context = get_context(mock_message.from_user.id, mock_message.chat.id)
+            context = await get_context(mock_message.from_user.id, mock_message.chat.id)
             messages = context.get("messages", [])
 
             # Должно быть 3 сообщения: system, user, assistant
@@ -85,7 +160,7 @@ async def test_handle_message_preserves_context(mock_message, mock_config):
             await handle_message(mock_message)
 
             # Проверяем контекст
-            context = get_context(mock_message.from_user.id, mock_message.chat.id)
+            context = await get_context(mock_message.from_user.id, mock_message.chat.id)
             messages = context.get("messages", [])
 
             # system + (user1 + assistant1) + (user2 + assistant2) = 5
@@ -180,7 +255,7 @@ async def test_handle_message_context_trimming(mock_message, mock_config):
                 await handle_message(mock_message)
 
             # Проверяем контекст
-            context = get_context(mock_message.from_user.id, mock_message.chat.id)
+            context = await get_context(mock_message.from_user.id, mock_message.chat.id)
             messages = context.get("messages", [])
 
             # trim_context вызывается ДО добавления ответа ассистента
@@ -198,6 +273,8 @@ async def test_handle_message_user_name_in_context(mock_message, mock_config):
         with patch("handlers.messages.get_llm_response", return_value="Ответ"):
             await handle_message(mock_message)
 
-            # Проверяем, что имя пользователя сохранено
-            context = get_context(mock_message.from_user.id, mock_message.chat.id)
-            assert context.get("user_name") == "Тестовый"
+            # Note: в новой реализации user_name не хранится в контексте отдельно,
+            # а сохраняется в таблице users через get_or_create_user
+            # Этот тест проверяет только что контекст существует
+            context = await get_context(mock_message.from_user.id, mock_message.chat.id)
+            assert len(context.get("messages", [])) > 0

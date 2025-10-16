@@ -14,6 +14,7 @@ class Config:
 
     telegram_token: str
     openai_api_key: str
+    database_url: str
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "openai/gpt-oss-20b:free"
     max_tokens: int = 1000
@@ -27,6 +28,7 @@ def load_config() -> Config:
     config = Config(
         telegram_token=getenv("TELEGRAM_TOKEN", ""),
         openai_api_key=getenv("OPENAI_API_KEY", ""),
+        database_url=getenv("DATABASE_URL", ""),
         openai_base_url=getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         openai_model=getenv("OPENAI_MODEL", "openai/gpt-oss-20b:free"),
         max_tokens=int(getenv("MAX_TOKENS", "1000")),
@@ -40,5 +42,8 @@ def load_config() -> Config:
 
     if not config.openai_api_key:
         raise ValueError("OPENAI_API_KEY не установлен в .env")
+
+    if not config.database_url:
+        raise ValueError("DATABASE_URL не установлен в .env")
 
     return config

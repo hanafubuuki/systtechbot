@@ -126,6 +126,7 @@ def mock_config():
     return Config(
         telegram_token="test_token",
         openai_api_key="test_key",
+        database_url="postgresql://test:test@localhost:5432/test",
         openai_base_url="https://test.api.com",
         openai_model="test-model",
         max_tokens=1000,

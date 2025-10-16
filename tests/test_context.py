@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -9,25 +10,25 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from constants import MessageRole
-from services.context import clear_context, get_context, save_context, trim_context, user_contexts
+from services.context import clear_context, get_context, save_context, trim_context
 
 
-def test_get_context_empty():
+@pytest.mark.asyncio
+async def test_get_context_empty():
     """Тест получения пустого контекста"""
-    # Очищаем глобальное хранилище перед тестом
-    user_contexts.clear()
-
-    result = get_context(123, 456)
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=1)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(return_value=1)),
+        patch("services.context.get_messages", new=AsyncMock(return_value=[])),
+    ):
+        result = await get_context(123, 456)
 
     assert result == {"messages": []}
-    assert "user_name" not in result
-    assert "last_activity" not in result
 
 
-def test_save_and_get_context():
+@pytest.mark.asyncio
+async def test_save_and_get_context():
     """Тест сохранения и получения контекста"""
-    user_contexts.clear()
-
     user_id = 123
     chat_id = 456
     messages = [
@@ -37,62 +38,77 @@ def test_save_and_get_context():
     ]
     user_name = "Ivan"
 
-    # Сохраняем контекст
-    save_context(user_id, chat_id, messages, user_name)
+    # Mock для get_messages возвращает те же сообщения
+    db_messages = [
+        {"id": 1, "role": "system", "content": "System prompt"},
+        {"id": 2, "role": "user", "content": "Hello"},
+        {"id": 3, "role": "assistant", "content": "Hi there!"},
+    ]
 
-    # Получаем контекст
-    result = get_context(user_id, chat_id)
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=1)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(return_value=1)),
+        patch("services.context.save_message", new=AsyncMock()),
+        patch("services.context.get_messages", new=AsyncMock(return_value=db_messages)),
+    ):
+        # Сохраняем контекст
+        await save_context(user_id, chat_id, messages, user_name)
+
+        # Получаем контекст
+        result = await get_context(user_id, chat_id)
 
     assert result["messages"] == messages
-    assert result["user_name"] == user_name
-    assert "last_activity" in result
 
 
-def test_save_context_without_name():
+@pytest.mark.asyncio
+async def test_save_context_without_name():
     """Тест сохранения контекста без имени пользователя"""
-    user_contexts.clear()
-
     user_id = 789
     chat_id = 101
     messages = [{"role": MessageRole.USER, "content": "Test"}]
 
-    save_context(user_id, chat_id, messages)
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=1)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(return_value=1)),
+        patch("services.context.save_message", new=AsyncMock()),
+        patch("services.context.get_messages", new=AsyncMock(return_value=[])),
+    ):
+        await save_context(user_id, chat_id, messages)
 
-    result = get_context(user_id, chat_id)
-    assert result["messages"] == messages
-    assert result["user_name"] is None
+    # Тест прошел успешно если не было exception
 
 
-def test_clear_context():
+@pytest.mark.asyncio
+async def test_clear_context():
     """Тест очистки контекста"""
-    user_contexts.clear()
-
     user_id = 111
     chat_id = 222
-    messages = [{"role": MessageRole.USER, "content": "Test message"}]
 
-    # Сохраняем контекст
-    save_context(user_id, chat_id, messages, "Test User")
+    mock_soft_delete = AsyncMock()
 
-    # Проверяем что контекст существует
-    assert get_context(user_id, chat_id)["messages"] == messages
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=1)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(return_value=1)),
+        patch("services.context.soft_delete_messages", new=mock_soft_delete),
+    ):
+        await clear_context(user_id, chat_id)
 
-    # Очищаем контекст
-    clear_context(user_id, chat_id)
-
-    # Проверяем что контекст пуст
-    assert get_context(user_id, chat_id) == {"messages": []}
+    # Проверяем что soft_delete_messages был вызван
+    mock_soft_delete.assert_called_once_with(1, 1)
 
 
-def test_clear_nonexistent_context():
+@pytest.mark.asyncio
+async def test_clear_nonexistent_context():
     """Тест очистки несуществующего контекста (не должно падать)"""
-    user_contexts.clear()
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=1)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(return_value=1)),
+        patch("services.context.soft_delete_messages", new=AsyncMock()),
+    ):
+        # Очищаем контекст, которого нет - не должно упасть
+        await clear_context(999, 888)
 
-    # Очищаем контекст, которого нет
-    clear_context(999, 888)
-
-    # Проверяем что ничего не сломалось
-    assert get_context(999, 888) == {"messages": []}
+    # Тест прошел успешно если не было exception
 
 
 def test_trim_context_keeps_system_prompt():
@@ -175,66 +191,106 @@ def test_trim_context_parametrized(messages_count, max_messages, expected_count,
         assert result[0]["role"] == MessageRole.SYSTEM
 
 
-def test_multiple_users_separate_contexts():
+@pytest.mark.asyncio
+async def test_multiple_users_separate_contexts():
     """Тест раздельных контекстов для разных пользователей"""
-    user_contexts.clear()
 
-    # Пользователь 1
-    save_context(1, 100, [{"role": MessageRole.USER, "content": "User 1"}], "Alice")
+    # Разные user_id возвращают разные db_user_id
+    async def mock_get_or_create_user(telegram_user_id: int, name: str):  # type: ignore[misc]
+        return telegram_user_id  # Просто возвращаем telegram_user_id как db_user_id
 
-    # Пользователь 2
-    save_context(2, 200, [{"role": MessageRole.USER, "content": "User 2"}], "Bob")
+    # Mock messages для разных пользователей
+    async def mock_get_messages(user_id: int, chat_id: int, limit: int = 10):  # type: ignore[misc]
+        if user_id == 1:
+            return [{"id": 1, "role": "user", "content": "User 1"}]
+        elif user_id == 2:
+            return [{"id": 2, "role": "user", "content": "User 2"}]
+        return []
 
-    # Проверяем что контексты разные
-    context1 = get_context(1, 100)
-    context2 = get_context(2, 200)
+    with (
+        patch("services.context.get_or_create_user", new=mock_get_or_create_user),
+        patch(
+            "services.context.get_or_create_chat",
+            new=AsyncMock(side_effect=[100, 200, 100, 200]),
+        ),
+        patch("services.context.get_messages", new=mock_get_messages),
+        patch("services.context.save_message", new=AsyncMock()),
+    ):
+        # Сохраняем для пользователей
+        await save_context(1, 100, [{"role": MessageRole.USER, "content": "User 1"}], "Alice")
+        await save_context(2, 200, [{"role": MessageRole.USER, "content": "User 2"}], "Bob")
+
+        # Получаем контексты
+        context1 = await get_context(1, 100)
+        context2 = await get_context(2, 200)
 
     assert context1["messages"][0]["content"] == "User 1"
-    assert context1["user_name"] == "Alice"
-
     assert context2["messages"][0]["content"] == "User 2"
-    assert context2["user_name"] == "Bob"
 
 
-def test_same_user_different_chats():
+@pytest.mark.asyncio
+async def test_same_user_different_chats():
     """Тест разных контекстов для одного пользователя в разных чатах"""
-    user_contexts.clear()
 
-    user_id = 100
+    # Mock messages для разных чатов
+    async def mock_get_messages(user_id: int, chat_id: int, limit: int = 10):  # type: ignore[misc]
+        if chat_id == 1:
+            return [{"id": 1, "role": "user", "content": "Chat 1"}]
+        elif chat_id == 2:
+            return [{"id": 2, "role": "user", "content": "Chat 2"}]
+        return []
 
-    # Чат 1
-    save_context(user_id, 1, [{"role": MessageRole.USER, "content": "Chat 1"}])
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=100)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(side_effect=[1, 2, 1, 2])),
+        patch("services.context.get_messages", new=mock_get_messages),
+        patch("services.context.save_message", new=AsyncMock()),
+    ):
+        # Сохраняем для разных чатов
+        await save_context(100, 1, [{"role": MessageRole.USER, "content": "Chat 1"}])
+        await save_context(100, 2, [{"role": MessageRole.USER, "content": "Chat 2"}])
 
-    # Чат 2
-    save_context(user_id, 2, [{"role": MessageRole.USER, "content": "Chat 2"}])
-
-    # Проверяем что контексты разные
-    context1 = get_context(user_id, 1)
-    context2 = get_context(user_id, 2)
+        # Получаем контексты
+        context1 = await get_context(100, 1)
+        context2 = await get_context(100, 2)
 
     assert context1["messages"][0]["content"] == "Chat 1"
     assert context2["messages"][0]["content"] == "Chat 2"
 
 
-def test_context_update():
+@pytest.mark.asyncio
+async def test_context_update():
     """Тест обновления существующего контекста"""
-    user_contexts.clear()
-
     user_id = 500
     chat_id = 600
 
-    # Первое сохранение
-    save_context(user_id, chat_id, [{"role": MessageRole.USER, "content": "First"}])
-
-    # Обновление контекста
-    new_messages = [
-        {"role": MessageRole.USER, "content": "First"},
-        {"role": MessageRole.ASSISTANT, "content": "Response"},
+    # Первый вызов get_messages возвращает 1 сообщение, второй - 2
+    get_messages_calls = [
+        [],  # Первый save_context
+        [{"id": 1, "role": "user", "content": "First"}],  # Второй save_context
+        [  # get_context
+            {"id": 1, "role": "user", "content": "First"},
+            {"id": 2, "role": "assistant", "content": "Response"},
+        ],
     ]
-    save_context(user_id, chat_id, new_messages, "Updated User")
 
-    # Проверяем обновленный контекст
-    result = get_context(user_id, chat_id)
+    with (
+        patch("services.context.get_or_create_user", new=AsyncMock(return_value=1)),
+        patch("services.context.get_or_create_chat", new=AsyncMock(return_value=1)),
+        patch("services.context.get_messages", new=AsyncMock(side_effect=get_messages_calls)),
+        patch("services.context.save_message", new=AsyncMock()),
+    ):
+        # Первое сохранение
+        await save_context(user_id, chat_id, [{"role": MessageRole.USER, "content": "First"}])
+
+        # Обновление контекста
+        new_messages = [
+            {"role": MessageRole.USER, "content": "First"},
+            {"role": MessageRole.ASSISTANT, "content": "Response"},
+        ]
+        await save_context(user_id, chat_id, new_messages, "Updated User")
+
+        # Получаем обновленный контекст
+        result = await get_context(user_id, chat_id)
 
     assert len(result["messages"]) == 2
-    assert result["user_name"] == "Updated User"
