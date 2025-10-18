@@ -4,7 +4,32 @@
 
 import type { StatsResponse, StatsParams, ChatMessage, ChatResponse } from '@/types/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+/**
+ * Получить API URL динамически
+ * - Для server-side: используем process.env.API_URL
+ * - Для client-side: используем текущий домен с портом 8005
+ */
+function getApiBaseUrl(): string {
+  // Server-side (Next.js SSR/SSG)
+  if (typeof window === 'undefined') {
+    return process.env.API_URL || 'http://localhost:8000'
+  }
+  
+  // Client-side (браузер)
+  // Используем текущий домен/IP, но порт 8005 для API
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+  
+  // Если localhost - используем стандартный порт 8000
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//localhost:8000`
+  }
+  
+  // Для production - используем текущий IP/домен с портом 8005
+  return `${protocol}//${hostname}:8005`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 /**
  * Получить статистику за указанный период
