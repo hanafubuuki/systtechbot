@@ -1,16 +1,52 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { getStats } from '@/lib/api'
 import { MetricsGrid } from '@/components/dashboard/metrics-grid'
 import { ActivitySection } from '@/components/dashboard/activity-section'
 import { ErrorMessage } from '@/components/dashboard/error-message'
+import type { StatsResponse } from '@/types/api'
 
-export default async function DashboardPage() {
-  let stats
+export default function DashboardPage() {
+  const [stats, setStats] = useState<StatsResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  try {
-    // Server Component загрузка данных с period=90 по умолчанию
-    stats = await getStats({ period: 90 })
-  } catch (error) {
-    console.error('Failed to load dashboard stats:', error)
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const data = await getStats({ period: 90 })
+        setStats(data)
+      } catch (err) {
+        console.error('[Dashboard] Failed to load stats:', err)
+        setError(err instanceof Error ? err.message : 'Unknown error')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadStats()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
+            Статистика диалогов Telegram-бота systtechbot
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-muted-foreground">Загрузка данных...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !stats) {
     return (
       <div className="container mx-auto p-8">
         <div className="mb-8">
