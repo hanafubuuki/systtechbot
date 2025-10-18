@@ -1,10 +1,11 @@
 name: Build and Publish Docker Images
 
-# Trigger: push в main и pull requests
+# Trigger: push в main, day06 и pull requests
 on:
   push:
     branches:
       - main
+      - day06
   pull_request:
     branches:
       - main
