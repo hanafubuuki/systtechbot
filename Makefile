@@ -1,4 +1,4 @@
-.PHONY: help install run test clean format lint typecheck coverage quality db-up db-down db-migrate db-reset
+.PHONY: help install run test clean format lint typecheck coverage quality db-up db-down db-migrate db-reset api-install api-run api-test api-docs
 
 help:
 	@echo "Доступные команды:"
@@ -17,6 +17,12 @@ help:
 	@echo "  make db-down    - Остановить PostgreSQL"
 	@echo "  make db-migrate - Применить миграции"
 	@echo "  make db-reset   - Сбросить БД и применить миграции заново"
+	@echo ""
+	@echo "Команды для работы с API:"
+	@echo "  make api-install - Установить зависимости API"
+	@echo "  make api-run     - Запустить Mock API"
+	@echo "  make api-test    - Тестировать API"
+	@echo "  make api-docs    - Открыть документацию API"
 
 install:
 	@echo "📦 Создание виртуального окружения..."
@@ -93,5 +99,24 @@ db-reset:
 	@echo "🔄 Применение миграций..."
 	uv run alembic upgrade head
 	@echo "✅ БД сброшена и миграции применены"
+
+# API commands
+api-install:
+	@echo "📦 Установка зависимостей API..."
+	uv sync --extra api
+	@echo "✅ Зависимости API установлены"
+
+api-run:
+	@echo "🚀 Запуск Mock API на http://localhost:8000"
+	@echo "📚 Документация: http://localhost:8000/docs"
+	uv run uvicorn api.main:app --reload --port 8000
+
+api-test:
+	@echo "🧪 Тестирование API..."
+	uv run pytest api/tests/ -v
+
+api-docs:
+	@echo "📚 Открытие документации API..."
+	@start http://localhost:8000/docs
 
 

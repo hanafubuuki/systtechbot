@@ -19,6 +19,12 @@ dev = [
     "ruff>=0.1.0",                  # форматтер + линтер (замена black+flake8+isort)
     "mypy>=1.7.0",                  # type checking
 ]
+api = [
+    "fastapi>=0.104.0,<1.0.0",     # современный async веб-фреймворк
+    "uvicorn[standard]>=0.24.0,<1.0.0",  # ASGI сервер
+    "faker>=20.0.0,<21.0.0",       # генерация mock данных
+    "httpx>=0.25.0",               # для тестирования FastAPI
+]
 
 [tool.ruff]
 line-length = 100

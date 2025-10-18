@@ -19,7 +19,7 @@ class Config:
     openai_model: str = "openai/gpt-oss-20b:free"
     max_tokens: int = 1000
     temperature: float = 0.7
-    max_context_messages: int = 10
+    max_context_messages: int = 15
     openai_timeout: int = 30
 
 

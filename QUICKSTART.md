@@ -1,257 +1,393 @@
-# ⚡ Шпаргалка по запуску бота
+# Quick Start - systtechbot Full Stack
 
-## 🚀 Быстрый запуск
+Полное руководство по запуску systtechbot: PostgreSQL + Backend API + Frontend
 
-### 1️⃣ Запустить все с нуля
-```powershell
-# Запустить PostgreSQL
-docker-compose up -d
+---
 
-# Подождать 5 секунд для инициализации
-Start-Sleep -Seconds 5
+## Требования
 
-# Запустить бота (в фоне)
-Start-Process powershell -ArgumentList "uv run bot.py" -NoNewWindow
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 14+
+- pnpm (для frontend)
+- uv (для Python зависимостей)
 
-# ИЛИ запустить бота в текущем окне (видны логи)
-uv run bot.py
-```
+---
 
-### 2️⃣ Через Makefile (быстрее)
-```powershell
-make db-up      # Запустить PostgreSQL
-make run        # Запустить бота
+## 1. Настройка переменных окружения
+
+Создайте файл `.env` в корне проекта:
+
+```bash
+# Database
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/systtechbot
+
+# Telegram Bot
+TELEGRAM_TOKEN=your_telegram_bot_token
+
+# OpenAI API
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_TIMEOUT=30
+
+# LLM Settings
+MAX_TOKENS=1000
+TEMPERATURE=0.7
+MAX_CONTEXT_MESSAGES=10
+
+# API Settings (по умолчанию real режим)
+# API_MODE=real  # можно установить "mock" для тестирования
+API_HOST=0.0.0.0
+API_PORT=8000
+API_CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ---
 
-## 🛑 Остановка бота
+## 2. Запуск PostgreSQL
 
-### Способ 1: Через Ctrl+C
-Если бот запущен в текущем окне терминала - просто нажмите `Ctrl+C`
+### Через Docker (рекомендуется)
 
-### Способ 2: Убить все процессы Python
-```powershell
-taskkill /F /IM python.exe
+```bash
+docker run -d \
+  --name systtechbot-postgres \
+  -e POSTGRES_USER=systtechbot \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=systtechbot \
+  -p 5432:5432 \
+  postgres:14
 ```
 
-### Способ 3: Через Process ID (если знаете PID)
-```powershell
-# Найти процесс
-Get-Process python
+### Или используйте локальный PostgreSQL
 
-# Остановить по ID
-Stop-Process -Id <PID>
-```
+Создайте базу данных:
 
----
-
-## 🔄 Перезапуск
-
-### Полный перезапуск системы
-```powershell
-# Остановить все
-taskkill /F /IM python.exe
-docker-compose down
-
-# Запустить все заново
-docker-compose up -d
-Start-Sleep -Seconds 5
-uv run bot.py
-```
-
-### Перезапуск только бота (БД не трогаем)
-```powershell
-taskkill /F /IM python.exe
-Start-Sleep -Seconds 2
-uv run bot.py
+```sql
+CREATE DATABASE systtechbot;
 ```
 
 ---
 
-## 📊 Проверка статуса
+## 3. Применение миграций
 
-### Проверить что запущено
-```powershell
-# PostgreSQL
-docker ps --filter "name=systtechbot_postgres"
-
-# Бот
-Get-Process python -ErrorAction SilentlyContinue
-```
-
-### Просмотр логов
-```powershell
-# Последние 20 строк
-Get-Content bot.log -Tail 20
-
-# В реальном времени (live)
-Get-Content bot.log -Wait -Tail 20
-
-# Только ошибки
-Get-Content bot.log | Select-String "ERROR"
-```
-
----
-
-## 🗄️ Работа с базой данных
-
-### Подключиться к БД
-```powershell
-docker exec -it systtechbot_postgres psql -U systtechbot -d systtechbot
-```
-
-### Быстрые запросы (без входа в psql)
-```powershell
-# Посмотреть все таблицы
-docker exec systtechbot_postgres psql -U systtechbot -d systtechbot -c "\dt"
-
-# Посмотреть пользователей
-docker exec systtechbot_postgres psql -U systtechbot -d systtechbot -c "SELECT * FROM users;"
-
-# Посмотреть последние 5 сообщений
-docker exec systtechbot_postgres psql -U systtechbot -d systtechbot -c "SELECT id, role, LEFT(content, 50) as content, created_at FROM messages ORDER BY created_at DESC LIMIT 5;"
-
-# Статистика
-docker exec systtechbot_postgres psql -U systtechbot -d systtechbot -c "SELECT COUNT(*) FROM messages WHERE deleted_at IS NULL;"
-```
-
----
-
-## 🧹 Очистка и сброс
-
-### Очистить логи
-```powershell
-Remove-Item bot.log -Force
-```
-
-### Сбросить базу данных (ОСТОРОЖНО!)
-```powershell
-make db-reset   # Удалит все данные и применит миграции заново
-```
-
-### Полная очистка
-```powershell
-# Остановить все
-taskkill /F /IM python.exe
-docker-compose down -v  # -v удаляет volumes (данные БД)
-
-# Запустить с чистого листа
-docker-compose up -d
-Start-Sleep -Seconds 5
+```bash
+# Применить миграции Alembic
 uv run alembic upgrade head
-uv run bot.py
+```
+
+Проверка:
+```bash
+# Должны быть созданы таблицы: users, chats, messages
+psql -U systtechbot -d systtechbot -c "\dt"
+```
+
+---
+
+## 4. Создание тестовых данных (опционально)
+
+Если база пустая, создайте тестовые данные:
+
+```bash
+uv run python scripts/create_test_data.py
+```
+
+Это создаст:
+- 10 тестовых пользователей
+- 10 тестовых чатов
+- ~2000 сообщений за 90 дней
+
+---
+
+## 5. Запуск Backend API
+
+### Через терминал 1:
+
+```bash
+# По умолчанию использует real режим (PostgreSQL)
+uv run python -m api.main
+
+# Или через uvicorn напрямую
+uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Проверка:**
+- API: http://localhost:8000
+- Health: http://localhost:8000/health (должно быть `{"status": "healthy", "mode": "real"}`)
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+---
+
+## 6. Запуск Frontend
+
+### Через терминал 2:
+
+```bash
+cd frontend
+
+# Установка зависимостей (если еще не установлены)
+pnpm install
+
+# Запуск dev сервера
+pnpm dev
+```
+
+**Проверка:**
+- Frontend: http://localhost:3000
+- Автоматический редирект на: http://localhost:3000/dashboard
+
+---
+
+## 7. Запуск Telegram Bot (опционально)
+
+### Через терминал 3:
+
+```bash
+uv run python bot.py
+```
+
+---
+
+## 🧪 Проверка работоспособности
+
+### 1. Dashboard
+
+1. Откройте http://localhost:3000/dashboard
+2. Проверьте:
+   - ✅ 4 карточки метрик отображаются
+   - ✅ Значения из PostgreSQL (не mock)
+   - ✅ График активности за 7/30/90 дней
+   - ✅ Переключение периодов работает
+   - ✅ Темная/светлая тема переключается
+
+### 2. Daily Reporter Chat
+
+1. Откройте http://localhost:3000/chat
+2. Проверьте:
+   - ✅ Welcome сообщение "Daily Reporter"
+   - ✅ Можно задавать любые вопросы
+   - ✅ Для сотрудников systtech - вопросы о задачах
+   - ✅ История сохраняется
+   - ✅ Кнопка "Очистить историю" работает
+
+**Примеры вопросов:**
+- "Привет! Расскажи что ты умеешь"
+- "Над какими задачами я работал сегодня?"
+- "Сколько всего пользователей в системе?"
+- "Покажи активность за последнюю неделю"
+
+### 3. API
+
+Проверьте endpoints через curl или Swagger UI:
+
+```bash
+# Статистика
+curl http://localhost:8000/api/v1/stats?period=7
+
+# Чат
+curl -X POST http://localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "message": "Сколько всего пользователей?",
+    "history": []
+  }'
+```
+
+### 4. Навигация
+
+- ✅ Кнопка "Dashboard" в navbar ведет на /dashboard
+- ✅ Кнопка "Chat" в navbar ведет на /chat
+- ✅ Логотип "systtechbot" ведет на / (редирект на /dashboard)
+- ✅ Активная страница подсвечена
+
+---
+
+## 🔧 Проверка качества кода
+
+### Python - ruff + mypy
+
+```bash
+# Проверка стиля (ruff)
+uv run ruff check . --select=E,F,W,I --ignore=E501
+
+# Автоматическое исправление
+uv run ruff check . --select=E,F,W,I --ignore=E501 --fix
+
+# Проверка типов (mypy)
+uv run mypy . --ignore-missing-imports --no-strict-optional
+```
+
+### Frontend - ESLint + TypeScript
+
+```bash
+cd frontend
+
+# Проверка TypeScript
+pnpm tsc --noEmit
+
+# Проверка ESLint (если настроен)
+pnpm lint
+```
+
+---
+
+## 📁 Структура проекта
+
+```
+systtechbot/
+├── api/                        # Backend API (FastAPI)
+│   ├── collectors/
+│   │   ├── base.py            # Базовый интерфейс
+│   │   ├── mock.py            # Mock данные
+│   │   └── real.py            # Real данные из PostgreSQL
+│   ├── main.py                # FastAPI app + endpoints
+│   ├── config.py              # Конфигурация API
+│   └── models.py              # Pydantic модели
+│
+├── services/                  # Бизнес-логика
+│   ├── analytics.py           # Text-to-SQL обработка
+│   ├── database.py            # PostgreSQL queries
+│   ├── llm.py                 # OpenAI интеграция
+│   └── context.py             # История диалогов
+│
+├── roles/
+│   └── prompts.py             # Системные промпты (Daily Reporter)
+│
+├── frontend/                  # Next.js Frontend
+│   ├── app/
+│   │   ├── dashboard/         # Dashboard страница
+│   │   └── chat/              # Daily Reporter чат
+│   ├── components/
+│   │   ├── dashboard/         # Компоненты дашборда
+│   │   └── chat/              # Компоненты чата
+│   ├── lib/
+│   │   ├── api.ts             # API клиент
+│   │   └── formatters.ts      # Утилиты форматирования
+│   └── types/
+│       └── api.ts             # TypeScript типы
+│
+├── bot.py                     # Telegram Bot
+├── alembic/                   # Миграции БД
+└── scripts/
+    └── create_test_data.py    # Генератор тестовых данных
 ```
 
 ---
 
 ## 🐛 Устранение проблем
 
-### Ошибка: "Conflict: terminated by other getUpdates"
-**Причина:** Запущено несколько экземпляров бота
+### Backend не запускается
+
+**Проблема:** `DATABASE_URL не установлен`
+**Решение:** Проверьте `.env` файл, убедитесь что `DATABASE_URL` правильный
+
+**Проблема:** `Failed to connect to database`
 **Решение:**
-```powershell
-taskkill /F /IM python.exe
-Start-Sleep -Seconds 3
-uv run bot.py
-```
+1. Проверьте что PostgreSQL запущен
+2. Проверьте credentials в `DATABASE_URL`
+3. Проверьте что БД создана
 
-### Ошибка: "port is already allocated" (порт 5432 занят)
-**Причина:** Уже запущен другой PostgreSQL
+### Frontend показывает ошибки
+
+**Проблема:** `Failed to fetch stats`
 **Решение:**
-```powershell
-# Остановить другие PostgreSQL контейнеры
-docker ps | findstr postgres
-docker stop <container_name>
+1. Проверьте что Backend API запущен на порту 8000
+2. Проверьте `NEXT_PUBLIC_API_URL` в `.env`
+3. Проверьте CORS настройки в `api/config.py`
 
-# Или остановить все Docker контейнеры
-docker stop $(docker ps -q)
-```
-
-### Ошибка: "DATABASE_URL не установлен"
-**Причина:** Отсутствует `.env` файл
+**Проблема:** Dashboard показывает mock данные
 **Решение:**
-```powershell
-# Создать .env из примера
-copy .env.example .env
+1. Проверьте что API запущен в real режиме (проверьте `/health`)
+2. Убедитесь что в `.env` не установлено `API_MODE=mock`
 
-# Отредактировать токены
-notepad .env
+### Chat не работает
+
+**Проблема:** Chat не отвечает
+**Решение:**
+1. Проверьте `OPENAI_API_KEY` в `.env`
+2. Проверьте логи Backend на ошибки LLM
+3. Проверьте что `DATABASE_URL` правильный
+
+**Проблема:** SQL не выполняется
+**Решение:**
+1. Проверьте логи на синтаксические ошибки SQL
+2. Попробуйте переформулировать вопрос
+3. Убедитесь что таблицы содержат данные
+
+---
+
+## 🚀 Режимы работы
+
+### Development (по умолчанию)
+
+- Backend: Hot reload через `--reload`
+- Frontend: Hot reload через `pnpm dev`
+- Real режим с PostgreSQL
+
+### Mock режим (для тестирования без БД)
+
+```bash
+# В .env или переменная окружения
+API_MODE=mock uv run python -m api.main
 ```
 
-### БД не подключается
-```powershell
-# Проверить что PostgreSQL запущен
-docker ps --filter "name=systtechbot_postgres"
+### Production
 
-# Посмотреть логи PostgreSQL
-docker logs systtechbot_postgres
+```bash
+# Backend
+uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
 
-# Перезапустить PostgreSQL
-docker-compose restart
+# Frontend
+cd frontend
+pnpm build
+pnpm start
 ```
 
 ---
 
-## 📝 Полезные алиасы (добавить в PowerShell Profile)
+## 📚 Документация
 
-```powershell
-# Открыть профиль для редактирования
-notepad $PROFILE
+- **API Docs:** http://localhost:8000/docs
+- **Chat Guide:** `frontend/doc/chat-guide.md`
+- **Sprint S3 Plan:** `sprint-s3-full-implementation.plan.md`
+- **Sprint S3 Summary:** `SPRINT_S3_SUMMARY.md`
+- **Changes Log:** `CHANGES_DAILY_REPORTER.md`
 
-# Добавить эти функции:
-function bot-start { docker-compose up -d; Start-Sleep 5; uv run bot.py }
-function bot-stop { taskkill /F /IM python.exe }
-function bot-restart { bot-stop; Start-Sleep 2; bot-start }
-function bot-logs { Get-Content bot.log -Wait -Tail 20 }
-function bot-status { docker ps --filter "name=systtechbot"; Get-Process python -ErrorAction SilentlyContinue }
-function db-shell { docker exec -it systtechbot_postgres psql -U systtechbot -d systtechbot }
+---
 
-# Использование после перезапуска PowerShell:
-# bot-start
-# bot-logs
-# bot-status
-# db-shell
+## 📊 Мониторинг
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Версия API
+curl http://localhost:8000/
+
+# Статистика
+curl http://localhost:8000/api/v1/stats?period=90
 ```
 
 ---
 
-## 🎯 Типичный рабочий процесс
+## ✨ Особенности
 
-### Начало работы
-```powershell
-cd c:\zz\systtechbot
-docker-compose up -d
-Start-Sleep 5
-uv run bot.py
-```
-
-### Конец работы
-```powershell
-# Нажать Ctrl+C (если бот в текущем окне)
-# ИЛИ
-taskkill /F /IM python.exe
-docker-compose down
-```
-
-### Быстрый тест
-```powershell
-# Открыть бота в Telegram: @mzakharovsysttech_bot
-# Отправить: /start
-# Отправить: Привет!
-# Проверить логи: Get-Content bot.log -Tail 10
-```
+- ✅ **Real-time data** из PostgreSQL
+- ✅ **Daily Reporter** - универсальный AI ассистент
+- ✅ **Text-to-SQL** - автоматическая генерация запросов
+- ✅ **История диалогов** - сохранение и восстановление
+- ✅ **Темная/светлая тема** - с сохранением выбора
+- ✅ **Responsive design** - адаптивный интерфейс
+- ✅ **Type-safe** - TypeScript + Pydantic
+- ✅ **Modern stack** - Next.js 15 + FastAPI
 
 ---
 
-## 📞 Контакты
-
-- **Бот:** [@mzakharovsysttech_bot](https://t.me/mzakharovsysttech_bot)
-- **Документация:** `doc/guides/`
-- **Ручное тестирование:** `doc/guides/MANUAL_TESTING.md`
-
----
-
-**Версия:** 0.1.0 (MVP)
-**Дата обновления:** 2025-10-16
-
+**Дата:** 2025-10-17
+**Версия:** 2.0
+**Статус:** Production Ready 🎉
